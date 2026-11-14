@@ -5,7 +5,6 @@ using System.IO;
 using System.Security;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -182,9 +181,9 @@ internal sealed class DeveloperSupportWindow : Window
         notice.Text = supportPage is null ? "후원 페이지 준비 중입니다." : "";
         notice.Visibility = supportPage is null ? Visibility.Visible : Visibility.Collapsed;
         Grid.SetColumn(notice, 0); footer.Children.Add(notice);
-        var actions = new UniformGrid
+        var actions = new StackPanel
         {
-            Rows = 1, HorizontalAlignment = HorizontalAlignment.Right,
+            Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center
         };
         var close = new Button
@@ -193,14 +192,14 @@ internal sealed class DeveloperSupportWindow : Window
             Style = (Style)FindResource("DarkDisabledButton"), Height = 40,
             Background = Brush(43, 66, 89), BorderBrush = Brush(92, 126, 158),
             BorderThickness = new Thickness(1), Foreground = Foreground,
-            Margin = new Thickness(0, 0, 5, 0)
+            Margin = new Thickness(0, 0, 10, 0)
         };
         close.Click += (_, _) => Close();
         var open = new Button
         {
             Name = "OpenDeveloperSupportPage", Content = "후원 페이지 열기 ↗",
             Style = (Style)FindResource("DeveloperSupportButton"), Height = 40,
-            Padding = new Thickness(17, 0, 17, 0), Margin = new Thickness(5, 0, 0, 0),
+            Padding = new Thickness(17, 0, 17, 0), Margin = new Thickness(0),
             IsEnabled = supportPage is not null
         };
         open.Click += (_, _) => OpenPage();

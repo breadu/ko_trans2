@@ -3,7 +3,6 @@ namespace KoTrans.App;
 
 internal sealed class LocalPreparationWindow : Window
 {
-    private const double ActionWidth = 56;
     private readonly TextBlock stage = new() { Text = "로컬 AI 번역 준비 중", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) };
     private readonly ProgressBar progress = new() { Height = 12, Minimum = 0, Maximum = 100, IsIndeterminate = true };
     private readonly TextBlock bytes = new() { Margin = new Thickness(0, 8, 0, 10) };
@@ -21,8 +20,7 @@ internal sealed class LocalPreparationWindow : Window
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         foreach (var button in new[] { retry, cancel })
         {
-            button.Width = ActionWidth;
-            button.Padding = new Thickness(0, 9, 0, 9);
+            button.VerticalAlignment = VerticalAlignment.Center;
             button.Margin = new Thickness(0, 0, button == retry ? 10 : 8, 8);
             buttons.Children.Add(button);
         }

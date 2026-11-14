@@ -41,7 +41,7 @@ internal sealed class ModelListWindow : Window
         top.Children.Add(searchRow); root.Children.Add(top);
         var bottom = new StackPanel { Margin = new Thickness(0, 5, 0, 0) }; DockPanel.SetDock(bottom, Dock.Bottom);
         bottom.Children.Add(Labelled("선택된 모델:", selectedId)); bottom.Children.Add(status);
-        var buttons = new WrapPanel { Margin = new Thickness(0, 10, 0, 0), ItemWidth = 134, ItemHeight = 44 };
+        var buttons = new WrapPanel { Margin = new Thickness(0, 10, 0, 0), ItemHeight = 44 };
         prices.Visibility = provider == TranslationProvider.Ollama ? Visibility.Collapsed : Visibility.Visible;
         foreach (var button in new[] { apply, refresh, prices }) { button.Margin = new Thickness(0, 0, 8, 6); button.Padding = new Thickness(12, 8, 12, 8); buttons.Children.Add(button); }
         apply.Background = new SolidColorBrush(Color.FromRgb(48, 137, 202));

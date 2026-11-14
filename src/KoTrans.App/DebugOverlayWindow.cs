@@ -43,8 +43,7 @@ internal sealed class DebugOverlayWindow : Window
         var save = new Button { Name = "DebugSave", Content = "진단 저장" }; var close = new Button { Name = "DebugClose", Content = "닫기" };
         foreach (var button in new[] { save, pause, close })
         {
-            button.Width = 96;
-            button.MinHeight = 36;
+            button.Height = 36;
             toolbar.Children.Add(button);
         }
         toolbar.Children.Add(activity);

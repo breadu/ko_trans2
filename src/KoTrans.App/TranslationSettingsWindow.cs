@@ -70,7 +70,7 @@ internal sealed partial class TranslationSettingsEditor : UserControl, IDisposab
     public void Dispose() { disposed = true; CancelConnectionCheck(); DisposeLocalModel(); activeModelList?.Close(); scroll.Dispose(); }
     private readonly TextBlock credentialState = new() { Name = "CredentialStatus", TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock providerCredentialState = new() { Name = "ProviderCredentialStatus", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) };
-    private readonly WrapPanel keyButtons = new() { ItemWidth = 172, ItemHeight = 46 };
+    private readonly WrapPanel keyButtons = new() { ItemHeight = 46 };
     private readonly TextBlock providerHelp = new() { Name = "ProviderHelp", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) };
     private readonly TextBlock ollamaHelp = new()
     {
@@ -690,8 +690,8 @@ internal sealed class TranslationSettingsWindow : Window
         Width = 650; Height = 740; MinHeight = 500; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var root = new DockPanel { Margin = new Thickness(22) };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        var apply = new Button { Content = "적용", Width = 72, MinHeight = 36 };
-        var cancel = new Button { Content = "닫기", Width = 72, MinHeight = 36, IsCancel = true };
+        var apply = new Button { Content = "적용", Height = 36 };
+        var cancel = new Button { Content = "닫기", Height = 36, IsCancel = true };
         buttons.Children.Add(apply);
         buttons.Children.Add(cancel);
         DockPanel.SetDock(buttons, Dock.Bottom);

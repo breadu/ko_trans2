@@ -133,15 +133,16 @@ internal static class LocalModelManagementUiTests
         var retry = Button(progress, "다시 시도");
         var footer = (UIElement)retry.Parent;
         Check(dismiss.Content as string == "닫기" && originalSize.Width > 0 && originalSize.Height > 0
-            && dismiss.RenderSize == originalSize && retry.RenderSize == dismiss.RenderSize
+            && dismiss.RenderSize == originalSize && retry.ActualHeight == dismiss.ActualHeight
+            && retry.ActualWidth > dismiss.ActualWidth
             && retry.TranslatePoint(new Point(), footer).Y == dismiss.TranslatePoint(new Point(), footer).Y,
-            "Local preparation retry and close must match the original compact button size and align");
+            "Local preparation buttons must fit their labels with matching heights and vertical alignment");
         var caption = new System.Windows.Media.FormattedText((string)retry.Content,
             System.Globalization.CultureInfo.GetCultureInfo("ko-KR"), retry.FlowDirection,
             new System.Windows.Media.Typeface(retry.FontFamily, retry.FontStyle, retry.FontWeight, retry.FontStretch),
             retry.FontSize, System.Windows.Media.Brushes.White, 1);
         Check(caption.WidthIncludingTrailingWhitespace + retry.Padding.Left + retry.Padding.Right <= retry.ActualWidth,
-            "The compact retry button clips its label");
+            "The retry button clips its label");
         Click(retry);
         Check(choice.IsCompletedSuccessfully && choice.Result && retry.Visibility == Visibility.Collapsed && Equals(dismiss.Content, "취소"),
             "Retry did not return the preparation window to its running state");
