@@ -31,6 +31,13 @@ internal static class OverlappingRowRecovery
             if (FindRow(image, bounds) is not { } crop) continue;
             attempts++;
             var result = recognize(crop);
+            // An already accurate sentence cannot gain 0.02 confidence near 1.
+            // Exact fresh agreement validates the tighter geometry independently
+            // of changing text, so scenery is not promoted to a following row.
+            if (inflated && TextProcessing.Normalize(result.Text, options.Language) == group[0].Text
+                && result.Confidence >= .9 && result.Confidence >= group[0].Confidence - .02) {
+                output.Remove(group[0]); output.Add(group[0] with {Bounds=crop}); continue;
+            }
             if (result.Confidence < .9 || result.Confidence < group.Average(l => l.Confidence) + (overlap ? .05 : .02)
                 || result.Text.Length is < 2 or > 80 || Japanese(result.Text) < 2) continue;
             if (inflated && TextProcessing.CharacterErrorRate(group[0].Text, result.Text) > .15) continue;

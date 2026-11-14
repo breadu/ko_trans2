@@ -71,6 +71,14 @@ internal static class OverlappingRowRecoveryTests
             "Single-row refinement replaced a different sentence");
         Check(OverlappingRowRecovery.Recover(inflated,[body],options,_=>(bodyText,.95f)).Single()==body,
             "Single-row refinement accepted insignificant confidence improvement");
+        var accurate = body with {Text=bodyText,Confidence=.99f};
+        var confirmed = OverlappingRowRecovery.Recover(inflated,[accurate,scenery with {Text="V"}],options,_=>(bodyText,.98f));
+        Check(confirmed.Single(l=>l.Text==bodyText) == (accurate with {Bounds=new(10,16,360,28)}),
+            "An accurate sentence could not confirm its tighter geometry without a confidence increase");
+        Check(LayoutProcessor.Arrange(confirmed,options,400,150).Single().Text==bodyText,
+            "A background V remained because the dialogue was already high confidence");
+        Check(OverlappingRowRecovery.Recover(inflated,[accurate],options,_=>(bodyText,.9f)).Single()==accurate,
+            "Large confidence loss validated a tighter row");
         Console.WriteLine($"Overlapping row recovery: {count} assertions passed (synthetic pixels and Mock recognition).");
     }
 }
