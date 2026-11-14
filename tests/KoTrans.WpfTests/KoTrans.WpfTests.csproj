@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><UseWPF>true</UseWPF><ApplicationManifest>../../src/KoTrans.App/app.manifest</ApplicationManifest></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../src/KoTrans.App/KoTrans.App.csproj" /></ItemGroup>
+</Project>

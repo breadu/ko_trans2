@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <KoTransOpenCvNative>$(MSBuildThisFileDirectory)../artifacts/opencv/win-x64/OpenCvSharpExtern.dll</KoTransOpenCvNative>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="$(KoTransOpenCvNative)" Link="OpenCvSharpExtern.dll"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="RequireKoTransOpenCvNative" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(KoTransOpenCvNative)')"
+           Text="Build the KO Trans 2 OpenCV runtime first with scripts/Prepare-OpenCv.ps1 (see docs/development.md)." />
+  </Target>
+</Project>

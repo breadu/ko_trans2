@@ -1,0 +1,32 @@
+{
+  "Name": "PP-OCRv5_mobile_rec",
+  "Kind": "recognition",
+  "Version": "PP-OCRv5",
+  "Languages": [
+    "ja",
+    "en",
+    "zh"
+  ],
+  "Source": "https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_rec_onnx",
+  "License": "Apache-2.0",
+  "File": "model.onnx",
+  "Sha256": "da72dc72ca4dc220df0dfde68c1dedc31c58d3e76a25871122e5056227d50092",
+  "ChannelOrder": "BGR",
+  "Layout": "NCHW",
+  "Decoder": "CTC",
+  "Height": 48,
+  "MinWidth": 320,
+  "MaxWidth": 3200,
+  "Dictionary": "dictionary.txt",
+  "DictionarySha256": "e306e86337a10a761c49247d11b19e684f670371eb67ba158d2f2538250695c4",
+  "Mean": [
+    0.5,
+    0.5,
+    0.5
+  ],
+  "Std": [
+    0.5,
+    0.5,
+    0.5
+  ]
+}

@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings><ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>KoTrans2</AssemblyName>
+    <!-- Single source for KO Trans 2 public SemVer. Change only this value for each release. -->
+    <Version>1.0.0</Version>
+    <!-- Multi-resolution Windows .ico for the EXE, taskbar and Explorer. -->
+    <ApplicationIcon>Assets/kotrans-app-icon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../KoTrans.LocalWorker/KoTrans.LocalWorker.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../KoTrans.OcrWorker/KoTrans.OcrWorker.csproj" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="../KoTrans.Core/KoTrans.Core.csproj" />
+    <ProjectReference Include="../KoTrans.Ocr/KoTrans.Ocr.csproj" />
+    <ProjectReference Include="../KoTrans.Infrastructure/KoTrans.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- High-resolution transparent mascot is embedded locally; no runtime downloads. -->
+    <Resource Include="Assets/translation-mascot.png" />
+    <!-- Transparent, compact artwork for the optional coffee support dialog. -->
+    <Resource Include="Assets/developer-coffee-cat.png" />
+    <!-- Exact selected kitten icon with transparent exterior, also for WPF title bars. -->
+    <Resource Include="Assets/kotrans-app-icon.png" />
+    <Resource Include="Assets/kotrans-app-icon.ico" />
+    <Resource Include="Docs/character-dictionary-guide.md" />
+  </ItemGroup>
+  <Target Name="CopyLocalWorker" AfterTargets="Build">
+    <ItemGroup><WorkerFiles Include="$(MSBuildProjectDirectory)/../KoTrans.LocalWorker/bin/$(Configuration)/net10.0-windows/win-x64/**/*" /></ItemGroup>
+    <Copy SourceFiles="@(WorkerFiles)" DestinationFiles="@(WorkerFiles->'$(TargetDir)local-worker/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <!-- OCR in the main process also uses the same app-local C++ runtime. -->
+    <ItemGroup><WorkerCrt Include="$(TargetDir)local-worker/msvcp140*.dll;$(TargetDir)local-worker/vcruntime140*.dll;$(TargetDir)local-worker/vcomp140.dll;$(TargetDir)local-worker/concrt140.dll" /></ItemGroup>
+    <Copy SourceFiles="@(WorkerCrt)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyOcrWorker" AfterTargets="Build" DependsOnTargets="CopyLocalWorker">
+    <ItemGroup>
+      <OcrWorkerFiles Include="$(MSBuildProjectDirectory)/../KoTrans.OcrWorker/bin/$(Configuration)/net10.0-windows/win-x64/**/*" Exclude="**/*.pdb;**/DirectML.Debug.dll;**/opencv_videoio_ffmpeg*.dll" />
+      <OcrWorkerCrt Include="$(TargetDir)local-worker/msvcp140*.dll;$(TargetDir)local-worker/vcruntime140*.dll;$(TargetDir)local-worker/vcomp140.dll;$(TargetDir)local-worker/concrt140.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OcrWorkerFiles)" DestinationFiles="@(OcrWorkerFiles->'$(TargetDir)ocr-worker/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(OcrWorkerCrt)" DestinationFolder="$(TargetDir)ocr-worker" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="PublishLocalWorker" AfterTargets="Publish">
+    <PropertyGroup><LocalWorkerPublishDir>$([System.IO.Path]::GetFullPath('$(PublishDir)', '$(MSBuildProjectDirectory)'))/local-worker/</LocalWorkerPublishDir></PropertyGroup>
+    <MSBuild Projects="$(MSBuildProjectDirectory)/../KoTrans.LocalWorker/KoTrans.LocalWorker.csproj" Targets="Publish"
+      Properties="Configuration=$(Configuration);RuntimeIdentifier=win-x64;SelfContained=true;PublishDir=$(LocalWorkerPublishDir);PublishProfile=;RuntimeFrameworkVersion=10.0.14;DebugType=none;DebugSymbols=false" />
+    <ItemGroup><PublishedWorkerCrt Include="$(LocalWorkerPublishDir)msvcp140*.dll;$(LocalWorkerPublishDir)vcruntime140*.dll;$(LocalWorkerPublishDir)vcomp140.dll;$(LocalWorkerPublishDir)concrt140.dll" /></ItemGroup>
+    <Copy SourceFiles="@(PublishedWorkerCrt)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="PublishOcrWorker" AfterTargets="Publish" DependsOnTargets="PublishLocalWorker">
+    <PropertyGroup><OcrWorkerPublishDir>$([System.IO.Path]::GetFullPath('$(PublishDir)', '$(MSBuildProjectDirectory)'))/ocr-worker/</OcrWorkerPublishDir></PropertyGroup>
+    <!-- Worker build is framework-dependent; restore its explicit self-contained
+         publish graph rather than relying on the parent application's assets. -->
+    <MSBuild Projects="$(MSBuildProjectDirectory)/../KoTrans.OcrWorker/KoTrans.OcrWorker.csproj" Targets="Restore"
+      Properties="Configuration=$(Configuration);RuntimeIdentifier=win-x64;SelfContained=true;RuntimeFrameworkVersion=10.0.14;PublishDir=$(OcrWorkerPublishDir);PublishProfile=;DebugType=none;DebugSymbols=false" />
+    <MSBuild Projects="$(MSBuildProjectDirectory)/../KoTrans.OcrWorker/KoTrans.OcrWorker.csproj" Targets="Publish"
+      Properties="Configuration=$(Configuration);RuntimeIdentifier=win-x64;SelfContained=true;RuntimeFrameworkVersion=10.0.14;PublishDir=$(OcrWorkerPublishDir);PublishProfile=;DebugType=none;DebugSymbols=false" />
+    <ItemGroup><OcrWorkerPublishedCrt Include="$(PublishDir)local-worker/msvcp140*.dll;$(PublishDir)local-worker/vcruntime140*.dll;$(PublishDir)local-worker/vcomp140.dll;$(PublishDir)local-worker/concrt140.dll" /></ItemGroup>
+    <Copy SourceFiles="@(OcrWorkerPublishedCrt)" DestinationFolder="$(OcrWorkerPublishDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

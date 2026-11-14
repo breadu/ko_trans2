@@ -1,0 +1,8 @@
+{
+  "sourceJsonSha256": "af5876933d8806a1b50d895867e0781e135cd92ff37381992828fc8d1b842d28",
+  "sourceParamsSha256": "183146fe9d9910352f68482f623bcbbb9fa7b9e8fa1463b9ad288cef00524d2d",
+  "sourceConfigSha256": "28fb721efc3634fc8aa677e474b9602cb815a91cf569ef357a7a553d7b3ce685",
+  "paddle": "3.1.1",
+  "paddle2onnx": "2.1.0",
+  "opset": 14
+}

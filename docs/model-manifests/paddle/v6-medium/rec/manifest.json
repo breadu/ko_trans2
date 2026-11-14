@@ -1,0 +1,47 @@
+{
+  "Name": "PP-OCRv6_medium_rec",
+  "Kind": "recognition",
+  "Version": "PP-OCRv6",
+  "Languages": [
+    "ja",
+    "en"
+  ],
+  "Source": "https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_rec_onnx/tree/50c7eacafc52fa7bcf4194e8cd08e46f8558504b",
+  "License": "Apache-2.0",
+  "File": "model.onnx",
+  "Sha256": "9C09ABF0957F7968C7586464B7397B84AD2387A0497A351AF40E9ACC71B673BA",
+  "ChannelOrder": "BGR",
+  "Layout": "NCHW",
+  "Height": 48,
+  "MinWidth": 320,
+  "MaxWidth": 3200,
+  "DetectionLongSide": 960,
+  "Decoder": "CTC",
+  "Dictionary": "dictionary.txt",
+  "DictionarySha256": "D051391881962EC266C4B4EE7B6A493FA2AEABAA2CD9EE369148CF3F6980AF99",
+  "Mean": [
+    0.5,
+    0.5,
+    0.5
+  ],
+  "Std": [
+    0.5,
+    0.5,
+    0.5
+  ],
+  "TensorContract": {
+    "InputName": "x",
+    "OutputName": "fetch_name_0",
+    "InputShape": [
+      -1,
+      3,
+      48,
+      -1
+    ],
+    "OutputShape": [
+      -1,
+      -1,
+      18710
+    ]
+  }
+}

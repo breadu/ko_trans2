@@ -1,0 +1,607 @@
+{
+  "product": "KO Trans 2",
+  "productVersion": "1.0.0",
+  "captureDateLocal": "2026-11-14",
+  "desktopPixels": [
+    2560,
+    1440
+  ],
+  "previousImageCount": 19,
+  "replacedImageCount": 19,
+  "captures": [
+    {
+      "file": "images/advanced.png",
+      "helpSections": [
+        "features.html#common"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "고급 설정의 클립보드·확대 캡처·OCR 문제 해결",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/area-controls.png",
+      "helpSections": [
+        "quick-start.html#area"
+      ],
+      "width": 758,
+      "height": 125,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 원본 픽셀 일부 잘라내기",
+      "state": "세부 영역 · area-selection",
+      "review": "2차 신규",
+      "nativeCrop": {
+        "source": "images/area-selection.png",
+        "bounds": [
+          7,
+          6,
+          765,
+          131
+        ]
+      }
+    },
+    {
+      "file": "images/area-selection.png",
+      "helpSections": [
+        "quick-start.html#area"
+      ],
+      "width": 1249,
+      "height": 685,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "실제 영역 편집기에서 합성 게임 대사를 둘러싼 선택과 활성화된 확정 버튼",
+      "review": "2차 신규",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/capture-controls.png",
+      "helpSections": [
+        "quick-start.html#connect"
+      ],
+      "width": 655,
+      "height": 278,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 원본 픽셀 일부 잘라내기",
+      "state": "세부 영역 · capture",
+      "review": "2차 신규",
+      "nativeCrop": {
+        "source": "images/capture.png",
+        "bounds": [
+          315,
+          240,
+          970,
+          518
+        ]
+      }
+    },
+    {
+      "file": "images/capture.png",
+      "helpSections": [
+        "quick-start.html#connect"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "캡처 · OCR의 게임 창과 창 선택 버튼",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/characters.png",
+      "helpSections": [
+        "features.html#characters"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "캐릭터 사전 설정",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/connected-detail.png",
+      "helpSections": [
+        "quick-start.html#connect"
+      ],
+      "width": 700,
+      "height": 181,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 원본 픽셀 일부 잘라내기",
+      "state": "세부 영역 · connected",
+      "review": "2차 신규",
+      "nativeCrop": {
+        "source": "images/connected.png",
+        "bounds": [
+          311,
+          385,
+          1011,
+          566
+        ]
+      }
+    },
+    {
+      "file": "images/connected.png",
+      "helpSections": [
+        "features.html#capture"
+      ],
+      "width": 1299,
+      "height": 907,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "합성 게임 창 연결 완료",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/game-picker.png",
+      "helpSections": [
+        "quick-start.html#connect"
+      ],
+      "width": 1055,
+      "height": 657,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "실제 WPF 창 선택 목록에서 격리된 합성 게임 창을 선택한 상태",
+      "review": "2차 신규",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/hotkeys.png",
+      "helpSections": [
+        "features.html#common"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "공통 설정의 단축키",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/launcher-help.png",
+      "helpSections": [
+        "quick-start.html#tray"
+      ],
+      "width": 769,
+      "height": 321,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 원본 픽셀 일부 잘라내기",
+      "state": "세부 영역 · main",
+      "review": "2차 신규",
+      "nativeCrop": {
+        "source": "images/main.png",
+        "bounds": [
+          15,
+          372,
+          784,
+          693
+        ]
+      }
+    },
+    {
+      "file": "images/local-ai.png",
+      "helpSections": [
+        "quick-start.html#translation"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "표준 로컬 모델 및 설치 버튼",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/main.png",
+      "helpSections": [
+        "index.html",
+        "quick-start.html#install"
+      ],
+      "width": 1274,
+      "height": 745,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "일반 제품 모드의 메인 화면",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/model-install.png",
+      "helpSections": [
+        "quick-start.html#translation"
+      ],
+      "width": 537,
+      "height": 342,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "다운로드 동의 전 실제 설치 확인 창",
+      "review": "2차 신규",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/model-preparation.png",
+      "helpSections": [
+        "quick-start.html#translation"
+      ],
+      "width": 524,
+      "height": 234,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "합성 진행률을 표시한 실제 다운로드 준비 창",
+      "review": "2차 신규",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/ocr-models.png",
+      "helpSections": [
+        "features.html#capture"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "PaddleOCR 모델 선택지 3개와 v6 Medium 기본값",
+      "review": "v1.0.0 모델 구성 반영 재촬영",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/ocr.png",
+      "helpSections": [
+        "features.html#capture"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "PaddleOCR와 DirectML 설정",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/ollama-models.png",
+      "helpSections": [
+        "features.html#providers"
+      ],
+      "width": 674,
+      "height": 657,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "테스트용 목록 응답을 표시한 실제 Ollama 모델 선택 창",
+      "review": "2차 신규",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/overlay-detail.png",
+      "helpSections": [
+        "features.html#subtitle",
+        "quick-start.html#start"
+      ],
+      "width": 1200,
+      "height": 263,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 테스트 프로세스의 자막 HWND 2개만 일시적으로 캡처 허용",
+      "state": "실제 원문·번역·도구 모음을 표시한 자막창 단독 프레임",
+      "review": "2차 신규"
+    },
+    {
+      "file": "images/overlay.png",
+      "helpSections": [
+        "quick-start.html#start"
+      ],
+      "width": 1249,
+      "height": 720,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 테스트 프로세스의 자막 HWND 2개만 일시적으로 캡처 허용",
+      "state": "합성 게임 위 실제 자막 텍스트 표면과 조작 툴바",
+      "review": "2차 신규",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/profile.png",
+      "helpSections": [
+        "quick-start.html#profile"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "일본어 게임 프로필의 기본 정보",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/shared.png",
+      "helpSections": [
+        "features.html#common"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "기본 프로필 공통 설정",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/study.png",
+      "helpSections": [
+        "features.html#study"
+      ],
+      "width": 1112,
+      "height": 957,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 기존 --debug-overlay 캡처 모드",
+      "state": "합성 일본어 문장과 예시 해설을 표시한 실제 문장 해설창",
+      "review": "2차 신규",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/subtitles.png",
+      "helpSections": [
+        "features.html#subtitle"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "글자 크기·색상·표시 옵션 및 미리보기",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/triggers.png",
+      "helpSections": [
+        "features.html#trigger"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "자동 인식과 입력 트리거",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/wizard-1.png",
+      "helpSections": [
+        "features.html#launcher"
+      ],
+      "width": 749,
+      "height": 932,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 기존 --debug-overlay 캡처 모드",
+      "state": "마법사 1단계",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/wizard-2.png",
+      "helpSections": [
+        "features.html#launcher"
+      ],
+      "width": 749,
+      "height": 932,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 기존 --debug-overlay 캡처 모드",
+      "state": "게임 후보 선택과 연결 버튼 활성화",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/wizard-3.png",
+      "helpSections": [
+        "features.html#launcher"
+      ],
+      "width": 749,
+      "height": 932,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 기존 --debug-overlay 캡처 모드",
+      "state": "부분 영역 지정과 전체 창 사용 선택",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/wizard-4.png",
+      "helpSections": [
+        "features.html#launcher"
+      ],
+      "width": 749,
+      "height": 932,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 기존 --debug-overlay 캡처 모드",
+      "state": "마법사 4단계",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/wizard-5.png",
+      "helpSections": [
+        "features.html#launcher"
+      ],
+      "width": 749,
+      "height": 932,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 기존 --debug-overlay 캡처 모드",
+      "state": "마법사 5단계",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/wizard-6.png",
+      "helpSections": [
+        "features.html#launcher"
+      ],
+      "width": 749,
+      "height": 932,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG · 기존 --debug-overlay 캡처 모드",
+      "state": "한국어 자막을 기다리는 단계",
+      "review": "2차 재촬영 교체",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    },
+    {
+      "file": "images/word-dictionary.png",
+      "helpSections": [
+        "features.html#subtitle"
+      ],
+      "width": 1524,
+      "height": 1170,
+      "dpiScale": 1.25,
+      "captureMethod": "Windows GDI 화면 복사 · DWM 프레임 경계 · PNG",
+      "state": "자막 미리보기와 단어 사전 주소",
+      "review": "2차 신규",
+      "trimmedEdges": {
+        "left": 5,
+        "top": 5,
+        "right": 5,
+        "bottom": 5
+      }
+    }
+  ],
+  "notIncluded": [
+    {
+      "screen": "Windows 알림 영역의 메뉴",
+      "reason": "같은 이름의 사용자 앱과 주변 알림 아이콘을 노출하지 않도록 메인 창 하단 안내만 수록했습니다."
+    },
+    {
+      "screen": "실제 모델 추론을 거친 마법사 완료",
+      "reason": "다운로드와 추론, 외부 호출 없이 실제 자막 UI에 합성 응답을 렌더링했습니다. 마법사 이미지는 자막 대기 단계입니다."
+    }
+  ]
+}

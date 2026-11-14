@@ -1,0 +1,52 @@
+{
+  "retrieved": "2026-10-31",
+  "format": "official ONNX export, not locally converted",
+  "license": "Apache-2.0",
+  "models": {
+    "det": {
+      "source": "https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_det_onnx/tree/61323801669c338b7891481ec7bac61ce31b576a",
+      "sha256": "EB13B44B25BB36F89528B68720AF8A61D9CF381176107F465DB1757B65D086E1",
+      "bytes": 62032837,
+      "officialConfigSha256": "7298D5EAD546584AF2504D03355F881AC7A7BC0EB1E282D3E159277C1D0AF871",
+      "tensor": {
+        "InputName": "x",
+        "OutputName": "fetch_name_0",
+        "InputShape": [
+          -1,
+          3,
+          -1,
+          -1
+        ],
+        "OutputShape": [
+          -1,
+          1,
+          -1,
+          -1
+        ]
+      }
+    },
+    "rec": {
+      "source": "https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_rec_onnx/tree/50c7eacafc52fa7bcf4194e8cd08e46f8558504b",
+      "sha256": "9C09ABF0957F7968C7586464B7397B84AD2387A0497A351AF40E9ACC71B673BA",
+      "bytes": 76554979,
+      "officialConfigSha256": "991B700FACF5B50A7DE193468207D5F4255B538DDE0D312AE3B7C7A9B6873129",
+      "tensor": {
+        "InputName": "x",
+        "OutputName": "fetch_name_0",
+        "InputShape": [
+          -1,
+          3,
+          48,
+          -1
+        ],
+        "OutputShape": [
+          -1,
+          -1,
+          18710
+        ]
+      }
+    }
+  },
+  "dictionary": "Official PostProcess.character_dict (18708) plus PaddleX use_space_char=True space (1), UTF-8 LF; CTC blank produces 18710 classes",
+  "runtimeDifferences": "Shared KO Trans DB/CTC layout pipeline: detector long side 960, max contours 1000, existing padding and Japanese tail/ruby/vertical processing."
+}

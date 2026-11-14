@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks><DefineConstants>$(DefineConstants);OCR_DIRECTML_WORKER</DefineConstants>
+    <ShouldBeValidatedAsExecutableReference>false</ShouldBeValidatedAsExecutableReference>
+    <Microsoft_AI_DirectML_SkipDebugLayerCopy>true</Microsoft_AI_DirectML_SkipDebugLayerCopy>
+  </PropertyGroup>
+  <!-- Compile the exact same OCR algorithms, in a separate process/runtime.
+       Never reference KoTrans.Ocr.dll (CPU ORT 1.31.0) from this worker. -->
+  <ItemGroup>
+    <ProjectReference Include="../KoTrans.Core/KoTrans.Core.csproj" />
+    <Compile Include="../KoTrans.Ocr/*.cs" Exclude="../KoTrans.Ocr/DirectMlOcrService.cs;../KoTrans.Ocr/DirectMlWorkerClient.cs;../KoTrans.Ocr/AssemblyInfo.cs" Link="SharedOcr/%(Filename)%(Extension)" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.24.4" PrivateAssets="all" Publish="true" />
+    <PackageReference Include="Microsoft.AI.DirectML" Version="1.15.4" PrivateAssets="all" Publish="true" />
+    <PackageReference Include="OpenCvSharp4" Version="4.11.0.20250507" PrivateAssets="all" Publish="true" />
+  </ItemGroup>
+  <Target Name="ExcludeUnusedWorkerFiles" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <_UnusedOcrWorkerPublish Include="@(ResolvedFileToPublish)" Condition="$([System.String]::Copy('%(ResolvedFileToPublish.Filename)').StartsWith('opencv_videoio_ffmpeg')) Or '%(ResolvedFileToPublish.Filename)' == 'DirectML.Debug' Or '%(ResolvedFileToPublish.Extension)' == '.lib' Or '%(ResolvedFileToPublish.Extension)' == '.pdb'" />
+      <ResolvedFileToPublish Remove="@(_UnusedOcrWorkerPublish)" />
+    </ItemGroup>
+  </Target>
+  <Import Project="../../scripts/OpenCvNative.targets" />
+</Project>

@@ -1,0 +1,600 @@
+<Window x:Class="KoTrans.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:KoTrans.App"
+        Title="KO Trans 2" Width="820" Height="485" MinWidth="360" MinHeight="400"
+        Background="#101B2A" Foreground="#EAF2FB" FontFamily="맑은 고딕" FontSize="13">
+  <Window.Resources>
+    <SolidColorBrush x:Key="CheckBoxInk" Color="#D8E8F5"/>
+    <local:DefaultProfileConverter x:Key="IsDefaultProfile"/>
+    <local:OverlayColorLabelConverter x:Key="OverlayColorLabel"/>
+    <DataTemplate x:Key="OverlayColorItem">
+      <StackPanel Orientation="Horizontal">
+        <Border Width="16" Height="16" Margin="0,0,8,0" BorderBrush="#71869A" BorderThickness="1" Background="{Binding}"/>
+        <TextBlock Style="{StaticResource UiComboText}" Text="{Binding Converter={StaticResource OverlayColorLabel}}" VerticalAlignment="Center"/>
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate x:Key="ProfileDisplay">
+      <TextBlock Text="{Binding Name}">
+        <TextBlock.Style>
+          <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource ComboBoxInk}"/>
+            <Style.Triggers>
+              <DataTrigger Value="True">
+                <DataTrigger.Binding>
+                  <MultiBinding Converter="{StaticResource IsDefaultProfile}">
+                    <Binding Path="Id"/>
+                    <Binding Path="DefaultProfileId" Source="{StaticResource IsDefaultProfile}"/>
+                  </MultiBinding>
+                </DataTrigger.Binding>
+                <Setter Property="Foreground" Value="#963C4B"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </TextBlock.Style>
+      </TextBlock>
+    </DataTemplate>
+    <SolidColorBrush x:Key="UiText" Color="#ECF4FC"/>
+    <SolidColorBrush x:Key="UiMuted" Color="#A5BCD1"/>
+    <Style TargetType="Button" BasedOn="{StaticResource DarkDisabledButton}"/>
+    <Style x:Key="UiCard" TargetType="Border">
+      <Setter Property="Background" Value="#1C2B3D"/>
+      <Setter Property="BorderBrush" Value="#344E65"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="18"/>
+      <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+    <Style x:Key="UiButton" TargetType="Button" BasedOn="{StaticResource DarkDisabledButton}">
+      <Setter Property="Background" Value="#2A4056"/>
+      <Setter Property="Foreground" Value="#EAF2FB"/>
+      <Setter Property="BorderBrush" Value="#48637A"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="13,9"/>
+      <Setter Property="Margin" Value="0,0,8,6"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="MinHeight" Value="36"/>
+    </Style>
+    <Style x:Key="UiPrimary" TargetType="Button" BasedOn="{StaticResource UiButton}">
+      <Setter Property="Background" Value="#328BD0"/>
+      <Setter Property="BorderBrush" Value="#59AAF0"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style x:Key="UiInput" TargetType="TextBox">
+      <Setter Property="Background" Value="#122235"/>
+      <Setter Property="Foreground" Value="#EDF6FF"/>
+      <Setter Property="BorderBrush" Value="#486078"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="10,8"/>
+      <Setter Property="Margin" Value="0,5,0,12"/>
+    </Style>
+    <Style x:Key="NavItem" TargetType="ListBoxItem">
+      <Setter Property="Foreground" Value="#B9CCE0"/>
+      <Setter Property="FontWeight" Value="Normal"/>
+      <Setter Property="Padding" Value="13,12"/>
+      <Setter Property="Margin" Value="0,2"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Style.Triggers>
+        <Trigger Property="IsSelected" Value="True">
+          <Setter Property="Background" Value="#275981"/>
+          <Setter Property="Foreground" Value="White"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="SectionTitle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,0,0,14"/>
+    </Style>
+    <Style x:Key="FieldLabel" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="#B0C9E0"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+  </Window.Resources>
+  <Grid x:Name="MainRoot" SizeChanged="ContentSizeChanged">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <!-- The profile selector stays visible in both compact and expanded views. -->
+    <Border x:Name="MainHeader" Grid.Row="0" Background="#172638" Padding="19,13" BorderBrush="#30485E" BorderThickness="0,0,0,1">
+      <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel VerticalAlignment="Center" Margin="0,0,25,0">
+          <TextBlock FontWeight="Bold" FontSize="21">KO <Run Foreground="#79BDFA">Trans 2</Run></TextBlock>
+          <TextBlock Text="게임 속 문장을, 내 언어로." FontSize="11" Foreground="#9BB2C7"/>
+        </StackPanel>
+        <Grid x:Name="HeaderProfile" Grid.Column="1" VerticalAlignment="Center">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <TextBlock Text="프로필" Foreground="#A7BFD4" VerticalAlignment="Center" Margin="0,0,10,0"/>
+          <ComboBox x:Name="Profiles" Grid.Column="1" MinWidth="120" MaxWidth="235" HorizontalAlignment="Left" Margin="0" ItemTemplate="{StaticResource ProfileDisplay}"
+                    SelectionChanged="ProfileChanged" AutomationProperties.Name="프로필 선택"/>
+        </Grid>
+        <Button Grid.Column="2" x:Name="ProfileSettingsButton" Content="프로필 설정" Style="{StaticResource UiButton}"
+                VerticalAlignment="Center" MinWidth="124" HorizontalContentAlignment="Center" Margin="0" Click="OpenProfileSettings"/>
+      </Grid>
+    </Border>
+    <Grid Grid.Row="1" x:Name="Workspace" IsEnabled="False">
+      <!-- The launcher is deliberately small: no OCR debugger or study/output panes. -->
+      <Grid x:Name="LauncherView" Margin="20,20,20,15">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="1.7*"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Border x:Name="LauncherTranslationCard" Grid.Column="0" Style="{StaticResource UiCard}" Margin="0,0,13,10">
+          <Grid x:Name="LauncherCardBody">
+          <ScrollViewer x:Name="LauncherScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel x:Name="LauncherContent" SizeChanged="LauncherContentSizeChanged">
+            <Grid x:Name="LauncherHeading" Margin="0,0,0,12">
+              <TextBlock x:Name="LauncherTitle" Text="게임 번역" FontSize="20" FontWeight="Bold"/>
+            </Grid>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock Text="번역 서비스" Style="{StaticResource FieldLabel}"/>
+                <TextBlock x:Name="TranslationSummary" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                           MaxHeight="40" LineHeight="20" LineStackingStrategy="BlockLineHeight"
+                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                           FontSize="15" FontWeight="SemiBold" Margin="0,7,8,0"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="캡처 대상" Style="{StaticResource FieldLabel}"/>
+                <TextBlock x:Name="LauncherTargetLabel" Text="연결 정보를 확인하는 중…" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0,7,0,0" FontSize="14"/>
+              </StackPanel>
+            </Grid>
+            <Grid x:Name="LauncherActions" Margin="0,20,0,9">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Button x:Name="LaunchGameButton" Content="게임 실행" Click="LaunchGameClick" Style="{StaticResource UiButton}"
+                      Visibility="Collapsed" Width="96" Height="59" FontSize="14" Margin="0,0,8,0"/>
+              <Button x:Name="WatchButton" Grid.Column="1" Content="번역 시작" Click="ToggleWatch" Style="{StaticResource UiPrimary}"
+                      FontSize="18" FontWeight="Bold" Height="59" Margin="0"/>
+            </Grid>
+            <Grid Margin="0,6,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock x:Name="OcrExecutionStatusText" Text="{Binding OcrExecution}"
+                         ToolTip="{Binding OcrExecutionDetail}" Foreground="#A3BAD0" FontSize="11" Margin="0,0,9,0"
+                         TextTrimming="CharacterEllipsis" MaxWidth="140"/>
+              <TextBlock Grid.Column="1" Text="│" Foreground="#66849C" FontSize="11" Margin="0,0,9,0"/>
+              <TextBlock Grid.Column="2" x:Name="LauncherHotkeyHint" Text="게임별 설정은 프로필에서 관리합니다."
+                         Foreground="#A3BAD0" FontSize="11" TextWrapping="Wrap"/>
+            </Grid>
+          </StackPanel>
+          </ScrollViewer>
+          <!-- Outside the scroll viewport so the toast can use existing card padding. -->
+          <Canvas IsHitTestVisible="False" Panel.ZIndex="10">
+            <ContentControl x:Name="LauncherFeedbackHost" Canvas.Top="-8" Height="44" MaxWidth="520"
+                            Width="{Binding ActualWidth, ElementName=LauncherCardBody}" HorizontalContentAlignment="Stretch"/>
+          </Canvas>
+          </Grid>
+        </Border>
+        <local:LauncherActionPanel Grid.Column="0" Grid.Row="1" x:Name="LauncherHelpActions" VerticalAlignment="Bottom" Margin="0,8,13,0"
+                                   SizeChanged="LauncherContentSizeChanged">
+          <WrapPanel x:Name="LauncherPrimaryActions">
+          <Button x:Name="FirstRunWizardButton" Click="OpenFirstRunWizard" Style="{StaticResource UiButton}" MinHeight="38"
+                  ToolTip="처음 사용하는 분들을 위해 게임 설정부터 번역 시작까지 안내합니다." AutomationProperties.Name="처음 사용하기">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Border x:Name="FirstRunWizardHelpIcon" Width="18" Height="18" CornerRadius="9"
+                      BorderBrush="#B6CBDC" BorderThickness="1" Margin="0,0,8,0"
+                      VerticalAlignment="Center">
+                <TextBlock Text="?" FontSize="11" FontWeight="Bold" Foreground="#EAF2FB"
+                           TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <TextBlock Text="처음 사용하기" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
+          <Button x:Name="HideSettingsButton" Content="작업 표시줄로 최소화" Click="HideSettings" Style="{StaticResource UiButton}" MinHeight="38"/>
+          </WrapPanel>
+          <Button x:Name="LauncherHelpButton" Content="도움말" Click="OpenLauncherHelp" Style="{StaticResource UiButton}"
+                  MinHeight="38" Margin="0,0,0,6" VerticalAlignment="Bottom"/>
+        </local:LauncherActionPanel>
+        <!-- New high-resolution transparent PNG mascot, decorative only. No thumbnail scaling artifacts. -->
+        <Border x:Name="LauncherMascotCard" Grid.Column="1" Grid.RowSpan="2" Background="#1C2D40"
+                BorderBrush="#344E65" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
+          <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <Image x:Name="LauncherMascot" Grid.Row="0"
+                   Source="/KoTrans2;component/Assets/translation-mascot.png"
+                   Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   MaxWidth="270" MaxHeight="230" Margin="10,10,10,0" RenderOptions.BitmapScalingMode="HighQuality"
+                   IsHitTestVisible="False"
+                   AutomationProperties.Name="파란 헤드셋을 쓴 귀여운 번역 마스코트"/>
+            <StackPanel Grid.Row="1" HorizontalAlignment="Center" Margin="8,0,8,21">
+              <TextBlock Text="게임 속 대사를, 편하게!"
+                         Foreground="#D6E9FA" FontWeight="SemiBold" FontSize="13"
+                         TextAlignment="Center"/>
+              <Button x:Name="DeveloperCoffeeButton" Click="OpenDeveloperSupport"
+                      Style="{StaticResource DeveloperSupportButton}" Height="39" Margin="0,10,0,0"
+                      FontSize="11" AutomationProperties.Name="개발자에게 커피 한 잔">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBlock Text="☕" FontFamily="Segoe UI Emoji" FontSize="14" Margin="0,0,6,0"/>
+                  <TextBlock Text="마음에 들었다면, 개발자에게 커피 한 잔" VerticalAlignment="Center"/>
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Grid>
+        </Border>
+      </Grid>
+      <!-- Expanded profile editor. Existing named controls and handlers remain on MainWindow. -->
+      <Grid x:Name="ProfileSettingsView" Visibility="Collapsed">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="224"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border x:Name="ProfileNavigation" Grid.RowSpan="2" Background="#18283A" BorderBrush="#30485E" BorderThickness="0,0,1,0" Padding="14,20">
+          <DockPanel LastChildFill="True">
+            <StackPanel>
+              <TextBlock x:Name="ProfileNavigationTitle" Text="프로필 설정" FontSize="18" FontWeight="Bold" Margin="8,0,0,15"/>
+              <ListBox x:Name="ProfilePages" SelectedIndex="0" SelectionChanged="ProfilePageChanged"
+                       Background="Transparent" BorderThickness="0" Foreground="#D5E4F2"
+                       ItemContainerStyle="{StaticResource NavItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBoxItem Content="기본 정보"/>
+                <ListBoxItem Content="캡처 · OCR"/>
+                <ListBoxItem Content="번역 서비스"/>
+                <ListBoxItem Content="자막창"/>
+                <ListBoxItem Content="인식 방식 · 트리거"/>
+                <ListBoxItem Content="캐릭터 사전"/>
+                <ListBoxItem x:Name="AdvancedSettingsPageItem" Content="고급 설정"/>
+                <ListBoxItem x:Name="GlobalSettingsPageItem" Content="공통 설정" Visibility="Collapsed"/>
+              </ListBox>
+            </StackPanel>
+          </DockPanel>
+        </Border>
+        <DockPanel x:Name="ProfileContent" Grid.Column="1" Grid.RowSpan="2" Margin="24,18,24,15">
+          <Grid x:Name="SettingsHeading" DockPanel.Dock="Top" Margin="0,0,0,15">
+            <StackPanel>
+            <TextBlock x:Name="ProfilePageHeading" Text="기본 정보" FontSize="22" FontWeight="Bold"/>
+            <TextBlock x:Name="ProfilePageDescription" Text="프로필별 기본 설정" Foreground="#A8C0D4"
+                       TextWrapping="Wrap" Margin="0,7,0,0" FontSize="12"/>
+            <Button x:Name="BackToGameProfileButton" Content="← 이전 게임 프로필로 돌아가기"
+                    Click="ReturnToPreviousGameProfile" Style="{StaticResource UiButton}" Visibility="Collapsed"
+                    HorizontalAlignment="Left" Margin="0,10,0,0"/>
+            </StackPanel>
+            <Canvas IsHitTestVisible="False" Panel.ZIndex="10">
+              <ContentControl x:Name="SettingsFeedbackHost" Height="44" MaxWidth="520"
+                              Width="{Binding ActualWidth, ElementName=SettingsHeading}" HorizontalContentAlignment="Stretch"/>
+            </Canvas>
+          </Grid>
+          <WrapPanel x:Name="ProfileSaveActions" DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="메인으로" Click="ReturnToLauncher" Style="{StaticResource UiButton}"/>
+            <Button x:Name="SaveSettingsButton" Click="SaveClicked" Style="{StaticResource UiPrimary}" Width="144" Height="40"
+                    AutomationProperties.Name="설정 저장">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Path x:Name="SaveSpinner" Visibility="Collapsed" Width="13" Height="13" Margin="0,0,6,0"
+                      Data="M 12,6 A 6,6 0 1 1 6,0" Stroke="#BFE3F1" StrokeThickness="2" Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
+                  <Path.RenderTransform><RotateTransform/></Path.RenderTransform>
+                </Path>
+                <TextBlock x:Name="SaveCheck" Text="✓" Foreground="#9BD7C5" Visibility="Collapsed" Margin="0,0,6,0"/>
+                <TextBlock x:Name="SaveCaption" Text="설정 저장"/>
+              </StackPanel>
+            </Button>
+          </WrapPanel>
+          <Grid>
+            <local:SmoothScrollViewer x:Name="BasicPage" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+                <Border Style="{StaticResource UiCard}">
+                  <StackPanel>
+                    <StackPanel x:Name="ProfileNameGroup">
+                      <TextBlock Text="프로필 이름" Style="{StaticResource SectionTitle}"/>
+                      <TextBox x:Name="ProfileName" MaxLength="80" Style="{StaticResource UiInput}" AutomationProperties.Name="프로필 이름"/>
+                    </StackPanel>
+                    <WrapPanel>
+                      <Button x:Name="CreateProfileButton" Content="새로 만들기" Click="NewProfile" Style="{StaticResource UiButton}"/>
+                      <Button x:Name="RenameProfileButton" Content="이름 변경" Click="RenameProfile" Style="{StaticResource UiButton}"/>
+                      <Button x:Name="DeleteProfileButton" Content="삭제" Click="DeleteProfile" Style="{StaticResource UiButton}"/>
+                    </WrapPanel>
+                    <!-- Hidden, not Collapsed: reserve the same space for both profile types. -->
+                    <TextBlock x:Name="DefaultProfileExplanation"
+                               Text="기본 프로필은 실제 번역에도 사용하며 이름 변경·삭제할 수 없습니다."
+                               Visibility="Hidden" Foreground="#9FB9D0" FontSize="11"
+                               TextWrapping="Wrap" Margin="0,10,0,0"/>
+                  </StackPanel>
+                </Border>
+                <Border Style="{StaticResource UiCard}">
+                  <StackPanel>
+                    <TextBlock Text="원문 읽기" Style="{StaticResource SectionTitle}"/>
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="원문 언어" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox x:Name="SourceLanguage" SelectionChanged="OptionChanged">
+                          <ComboBoxItem Content="영어"/><ComboBoxItem Content="일본어"/>
+                        </ComboBox>
+                      </StackPanel>
+                      <StackPanel Grid.Column="2"><TextBlock Text="읽기 모드" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox x:Name="ReadingMode" SelectionChanged="OptionChanged">
+                          <ComboBoxItem Content="일반 (대사 중심)"/><ComboBoxItem Content="노벨 (본문 중심)"/>
+                        </ComboBox>
+                      </StackPanel>
+                    </Grid>
+                    <CheckBox x:Name="VerticalText" Content="일본어 세로쓰기 · 오른쪽부터"
+                              Checked="OriginalChanged" Unchecked="OriginalChanged"/>
+                    <CheckBox x:Name="JapaneseFuriganaOption" Content="일본어 원문에 한자 읽기(후리가나) 표시"
+                              Checked="OriginalChanged" Unchecked="OriginalChanged"/>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </local:SmoothScrollViewer>
+            <local:SmoothScrollViewer x:Name="CapturePage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+                <!-- The primary task comes first: select the game and its dialogue region. -->
+                <Border x:Name="GameCaptureCard" Style="{StaticResource UiCard}">
+                  <StackPanel>
+                    <TextBlock Text="게임 캡처" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="캡처 대상" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox x:Name="InputMode" SelectionChanged="InputModeChanged" AutomationProperties.Name="캡처 대상">
+                      <ComboBoxItem Content="게임 창"/><ComboBoxItem Content="화면 영역"/><ComboBoxItem Content="클립보드"/>
+                    </ComboBox>
+                    <TextBlock x:Name="CaptureModeHelp" Text="게임 창 (추천): 창을 이동해도 인식 영역이 유지됩니다. 실행 중인 게임을 선택하세요."
+                                Foreground="#A4C2DA" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                     <TextBlock x:Name="TargetLabel" Text="창 모드에서는 실행 중인 창을 선택하세요."
+                               Foreground="#C4D7E8" TextWrapping="Wrap" LineHeight="21" MaxHeight="42" TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0,6,0,12"/>
+                    <WrapPanel>
+                      <Button x:Name="PickWindowButton" Content="대상 창 선택" Click="PickWindow" Style="{StaticResource UiButton}"/>
+                      <Button x:Name="PickWindowDirectButton" Content="대상 창 직접 클릭"
+                              Click="PickWindowDirect" Style="{StaticResource UiButton}"/>
+                      <Button x:Name="SelectAreaButton" Content="영역 지정" Click="SelectArea" Style="{StaticResource UiPrimary}"/>
+                    </WrapPanel>
+                    <Border x:Name="CaptureAreaSeparator" Height="1" Background="#426078" Margin="0,12,0,14"/>
+                    <TextBlock x:Name="CaptureAreaHeading" Text="캡처 영역" Style="{StaticResource SectionTitle}"
+                               FontSize="15" Margin="0,0,0,9"/>
+                    <Grid x:Name="SavedAreaLayout">
+                      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                      <StackPanel Grid.Column="0" VerticalAlignment="Top" Margin="0,0,10,0">
+                        <TextBlock x:Name="CaptureAreaBasisText" Text="{Binding CaptureAreaBasis}" FontSize="12"
+                                   Foreground="#A4C2DA" TextWrapping="Wrap" Margin="0,0,0,7"/>
+                        <TextBlock x:Name="SavedAreaSummary" Text="{Binding CaptureAreaPosition}" ToolTip="{Binding Area}"
+                                   FontSize="13" Foreground="#ECF4FC" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="CaptureAreaSizeText" Text="{Binding CaptureAreaSize}" ToolTip="{Binding Area}"
+                                   FontSize="13" Foreground="#ECF4FC" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                      </StackPanel>
+                      <!-- Keep the preview's layout slot even when no window, area, or monitor is available. -->
+                      <Border x:Name="CaptureMapFrame" Grid.Column="1" Width="180" Height="110"
+                              Margin="12,0,0,0" VerticalAlignment="Center"
+                              Background="#14283B" BorderBrush="#58748A" BorderThickness="1" CornerRadius="5">
+                        <Grid ClipToBounds="True">
+                          <local:CaptureAreaMap x:Name="AreaMap" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                          <StackPanel x:Name="CaptureMapEmptyState" HorizontalAlignment="Center"
+                                      VerticalAlignment="Center" IsHitTestVisible="False">
+                            <TextBlock Text="미리보기 없음" HorizontalAlignment="Center" TextAlignment="Center"
+                                       FontSize="12" Foreground="#B6CBDC"/>
+                            <TextBlock x:Name="CaptureMapEmptyReason" HorizontalAlignment="Center"
+                                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="160"
+                                       FontSize="10" Foreground="#829DB3" Margin="0,4,0,0"/>
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+                <Border Style="{StaticResource UiCard}">
+                  <StackPanel>
+                    <TextBlock Text="OCR 모델" Style="{StaticResource SectionTitle}"/>
+                    <ComboBox x:Name="OcrEngineChoices"
+                              SelectionChanged="OcrModelSelectionChanged" AutomationProperties.Name="OCR 모델"/>
+                    <TextBlock x:Name="OcrModelDescription" Foreground="#B6CBDC" FontSize="13"
+                               TextWrapping="Wrap" Margin="0,9,0,0"/>
+                    <!-- Only show missing/invalid model warnings; normal readiness stays out of the way. -->
+                    <TextBlock x:Name="OcrEngineStatus" Foreground="#FFD49F" FontSize="12"
+                               TextWrapping="Wrap" Margin="0,7,0,0" Visibility="Collapsed"/>
+                    <CheckBox x:Name="OcrGpuAcceleration" Content="OCR GPU 가속 사용 (DirectML)" Margin="0,14,0,4"
+                              Checked="OcrGpuAccelerationChanged" Unchecked="OcrGpuAccelerationChanged"/>
+                    <TextBlock x:Name="OcrGpuDescription" Foreground="#9AB4CD" FontSize="12" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </local:SmoothScrollViewer>
+            <!-- Rarely used options and OCR recovery actions have their own navigation page. -->
+            <local:SmoothScrollViewer x:Name="AdvancedPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+                <Border Style="{StaticResource UiCard}">
+                  <StackPanel>
+                    <TextBlock Text="클립보드" Style="{StaticResource SectionTitle}"/>
+                    <CheckBox x:Name="CopyOcrResultToClipboard" Content="OCR 결과 클립보드로 복사"
+                              Checked="OcrClipboardChanged" Unchecked="OcrClipboardChanged"
+                              ToolTip="확정된 OCR 원문만 복사합니다. 클립보드 입력 모드에서는 사용할 수 없습니다."/>
+                  </StackPanel>
+                </Border>
+                <Border Style="{StaticResource UiCard}">
+                  <StackPanel>
+                    <TextBlock Text="확대 화면 캡처" Style="{StaticResource SectionTitle}"/>
+                    <CheckBox x:Name="OriginalCaptureWhenScaled" Content="확대 중 원본 게임 화면 사용"
+                              Checked="OriginalCaptureWhenScaledChanged" Unchecked="OriginalCaptureWhenScaledChanged"/>
+                    <TextBlock Text="Magpie로 화면을 확대해 사용할 때 적용됩니다. Magpie 사용 중 원본 게임 화면이 제대로 인식되지 않으면 이 옵션을 끄세요."
+                               Foreground="#9AB4CD" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                  </StackPanel>
+                </Border>
+                <Border Style="{StaticResource UiCard}">
+                  <StackPanel>
+                    <TextBlock Text="OCR 문제 해결" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock x:Name="MarkerLearningExplanation"
+                               Text="게임에서 문장 끝의 깜빡이는 표시가 화면 변화로 인식되어 OCR이 반복 실행될 수 있습니다. 이를 줄이기 위해 지원되는 설정에서는 게임별로 문장 끝 표시를 자동 학습합니다.&#10;반복 인식이 계속되거나 문장 끝 표시가 잘못 처리될 때만 아래 버튼으로 학습 결과를 초기화하세요."
+                               Foreground="#9AB4CD" FontSize="12" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="MarkerLearningStatus" Foreground="#9AB4CD" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Style.Triggers>
+                            <Trigger Property="Text" Value="">
+                              <Setter Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                    <Button x:Name="ResetMarkerLearningButton" Content="문장 끝 표시 학습 초기화"
+                            Style="{StaticResource UiButton}" Click="ResetMarkerLearningClicked"
+                            Margin="0,12,0,0" HorizontalAlignment="Left"
+                            ToolTip="현재 게임과 OCR 모델의 문장 끝 표시 학습 데이터만 삭제합니다. 번역을 중지하며 다음 시작부터 다시 학습합니다."/>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </local:SmoothScrollViewer>
+            <local:SmoothScrollViewer x:Name="SubtitlePage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+                <Border Style="{StaticResource UiCard}">
+                  <StackPanel>
+                    <DockPanel Margin="0,0,0,14" LastChildFill="True">
+                      <Button x:Name="OverlayVisibilityButton" DockPanel.Dock="Right" Content="자막창 열기" Click="ToggleOverlayVisibility"
+                              Style="{StaticResource UiButton}" Margin="8,0,0,0" AutomationProperties.Name="자막창 열기 또는 감추기"
+                              ToolTip="게임별 자막창 위치·크기·모니터를 기억합니다. 테두리와 모서리로 크기를 조절할 수 있으며 자동 번역을 시작하면 자막창이 열립니다."/>
+                      <TextBlock Text="자막 설정" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                      <StackPanel>
+                        <TextBlock Text="한국어 번역" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                        <TextBlock Text="글자 크기" Style="{StaticResource FieldLabel}"/>
+                        <Grid>
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="52"/></Grid.ColumnDefinitions>
+                          <Slider x:Name="FontSlider" Minimum="12" Maximum="60" Value="24" IsMoveToPointEnabled="True" ValueChanged="StyleChanged"
+                                  Margin="0,8,0,20" AutomationProperties.Name="한국어 번역 글자 크기"/>
+                          <TextBlock x:Name="TranslationFontSizeValue" Grid.Column="1"
+                                     Text="{Binding ElementName=FontSlider, Path=Value, StringFormat={}{0:0.#}}"
+                                     TextAlignment="Right" VerticalAlignment="Center" Margin="5,8,0,20" Foreground="#DDECF8"
+                                     AutomationProperties.Name="한국어 번역 글자 크기 값"/>
+                        </Grid>
+                        <TextBlock Text="글자 색상" Style="{StaticResource FieldLabel}"/>
+                        <DockPanel LastChildFill="True">
+                          <Button x:Name="TranslationColorPicker" DockPanel.Dock="Right" Content="🎨"
+                                  Width="36" Height="32" Padding="0" Margin="6,4,0,10" ToolTip="한국어 번역 색상 선택"
+                                  Click="PickTranslationColor" AutomationProperties.Name="한국어 번역 색상 선택"/>
+                          <ComboBox x:Name="FontColor" SelectionChanged="OptionChanged"
+                                    ItemTemplate="{StaticResource OverlayColorItem}"
+                                    AutomationProperties.Name="한국어 번역 기본 색상"/>
+                        </DockPanel>
+                      </StackPanel>
+                      <StackPanel Grid.Column="2">
+                        <TextBlock Text="영어·일본어 원문" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                        <TextBlock Text="글자 크기" Style="{StaticResource FieldLabel}"/>
+                        <Grid>
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="52"/></Grid.ColumnDefinitions>
+                          <Slider x:Name="OriginalFontSlider" Minimum="12" Maximum="60" Value="21" IsMoveToPointEnabled="True" ValueChanged="StyleChanged"
+                                  Margin="0,8,0,20" AutomationProperties.Name="영어 일본어 원문 글자 크기"/>
+                          <TextBlock x:Name="OriginalFontSizeValue" Grid.Column="1"
+                                     Text="{Binding ElementName=OriginalFontSlider, Path=Value, StringFormat={}{0:0.#}}"
+                                     TextAlignment="Right" VerticalAlignment="Center" Margin="5,8,0,20" Foreground="#DDECF8"
+                                     AutomationProperties.Name="원문 글자 크기 값"/>
+                        </Grid>
+                        <TextBlock Text="글자 색상" Style="{StaticResource FieldLabel}"/>
+                        <DockPanel LastChildFill="True">
+                          <Button x:Name="OriginalColorPicker" DockPanel.Dock="Right" Content="🎨"
+                                  Width="36" Height="32" Padding="0" Margin="6,4,0,10" ToolTip="영어·일본어 원문 색상 선택"
+                                  Click="PickOriginalColor" AutomationProperties.Name="원문 색상 선택"/>
+                          <ComboBox x:Name="OriginalFontColor" SelectionChanged="OptionChanged"
+                                    ItemTemplate="{StaticResource OverlayColorItem}"
+                                    AutomationProperties.Name="원문 기본 색상"/>
+                        </DockPanel>
+                      </StackPanel>
+                      <CheckBox x:Name="ShowKorean" Grid.Row="1" Content="한국어 번역 표시" IsChecked="True"
+                                Checked="SubtitleVisibilityChanged" Unchecked="SubtitleVisibilityChanged"/>
+                      <CheckBox x:Name="ShowOriginal" Grid.Row="1" Grid.Column="2" Content="원문 표시" IsChecked="True"
+                                Checked="SubtitleVisibilityChanged" Unchecked="SubtitleVisibilityChanged"/>
+                    </Grid>
+                    <TextBlock Text="불투명도" Style="{StaticResource FieldLabel}" Margin="0,10,0,0"/>
+                    <Slider x:Name="OpacitySlider" Minimum="0.2" Maximum="1" Value="0.9" IsMoveToPointEnabled="True"
+                            SmallChange="0.01" LargeChange="0.08" ValueChanged="StyleChanged" Margin="0,8,0,14"/>
+                    <StackPanel Orientation="Horizontal">
+                      <CheckBox x:Name="OverlayPassThrough" Content="게임에 클릭 전달" Checked="OverlayPassThroughChanged"
+                                Unchecked="OverlayPassThroughChanged"
+                                AutomationProperties.HelpText="자막창 위를 클릭해도 게임에 전달합니다. 켜면 단어 사전 클릭을 사용할 수 없습니다."/>
+                      <TextBlock x:Name="OverlayPassThroughHelp" Text="ⓘ" Foreground="#A5BCD1" FontSize="15"
+                                 Margin="6,5,0,12" VerticalAlignment="Center" Cursor="Help"
+                                 ToolTip="자막창 위를 클릭해도 게임에 전달합니다. 켜면 단어 사전 클릭을 사용할 수 없습니다."
+                                 AutomationProperties.Name="게임에 클릭 전달 도움말"/>
+                    </StackPanel>
+                    <CheckBox x:Name="WordDictionaryOption" Content="단어 사전" Checked="WordDictionaryChanged"
+                              Unchecked="WordDictionaryChanged"/>
+                    <Border Height="1" Background="#344E65" Margin="0,12,0,16"/>
+                    <Grid MinHeight="135">
+                      <Grid.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                          <GradientStop Color="#75897D" Offset="0"/><GradientStop Color="#394D65" Offset="1"/>
+                        </LinearGradientBrush>
+                      </Grid.Background>
+                      <Border x:Name="SubtitlePreviewSurface" Background="#18222E" Padding="16" Margin="12">
+                        <StackPanel>
+                          <TextBlock x:Name="SubtitlePreviewOriginal" Text="これは日本語のプレビューです。" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                          <TextBlock x:Name="SubtitlePreviewTranslation" Text="한국어 번역이 이렇게 표시됩니다." TextWrapping="Wrap"/>
+                        </StackPanel>
+                      </Border>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+                <Border Style="{StaticResource UiCard}">
+                  <StackPanel>
+                    <TextBlock Text="단어 사전 설정" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="원문 단어에 마우스를 올려 선택하고 클릭하면 사전 팝업을 엽니다. 검색어 위치에 %%SS를 넣으세요."
+                               TextWrapping="Wrap" Foreground="#A6BCD1" Margin="0,0,0,12"/>
+                    <TextBlock Text="영어 사전 주소" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="EnglishDictionaryUrl" Style="{StaticResource UiInput}" MaxLength="2048" AutomationProperties.Name="영어 단어 사전 주소"/>
+                    <TextBlock Text="일본어 사전 주소" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="JapaneseDictionaryUrl" Style="{StaticResource UiInput}" MaxLength="2048" AutomationProperties.Name="일본어 단어 사전 주소"/>
+                    <TextBlock Text="기본값: 네이버 영한·일한 사전. Edge 또는 Chrome이 필요하며, 단어를 클릭할 때만 온라인 사전에 접속합니다."
+                               TextWrapping="Wrap" Foreground="#A6BCD1" FontSize="12"/>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </local:SmoothScrollViewer>
+            <Border x:Name="ProfileEditorPage" Visibility="Collapsed" Style="{StaticResource UiCard}" Margin="0" VerticalAlignment="Top">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="*"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <ContentControl x:Name="ProfileEditorHost"/>
+                <CheckBox Grid.Row="1" x:Name="StudyTopmostOption" Visibility="Collapsed"
+                          Content="문장 해설창 항상 위"
+                          Margin="0,12,0,2" ToolTip="해설창을 다른 창보다 위에 고정합니다."
+                          Checked="StudyTopmostChanged" Unchecked="StudyTopmostChanged"/>
+              </Grid>
+            </Border>
+          </Grid>
+        </DockPanel>
+      </Grid>
+      <!-- Kept only for existing pipeline/QA diagnostics and mock regressions, never shown to users. -->
+      <StackPanel Visibility="Collapsed" IsHitTestVisible="False" Focusable="False">
+        <Button x:Name="TranslationSettingsButton" Content="AI · 키 · 입력 설정" Click="ConfigureTranslation"/>
+        <Button Content="대화 문맥 초기화" Click="ResetContext"/>
+        <Button x:Name="QaFixtureButton" Content="QA 합성 화면" Click="ShowQaFixture"/>
+        <Button Content="지금 캡처" Click="Capture"/>
+        <Button Content="이미지 열기" Click="LoadImage"/>
+        <Button Content="OCR 실행" Click="RunOcr"/>
+        <Button Content="PNG 저장" Click="SaveCapture"/>
+        <Button Content="취소" Click="CancelCapture"/>
+        <Button Content="불러온 이미지 번역" Click="TranslateImage"/>
+        <Button Content="이 원문 학습" Click="LearnRecognized"/>
+        <Button Content="현재 화면/클립보드 학습" Click="LearnCurrent"/>
+        <Button Content="문장 해설창 보기 (내부 진단)" Click="ShowStudy"/>
+        <TextBox x:Name="OcrText" IsReadOnly="True" AutomationProperties.Name="OCR 결과"/>
+        <TextBox x:Name="TranslatedText" IsReadOnly="True" AutomationProperties.Name="번역 결과"/>
+      </StackPanel>
+    </Grid>
+    <Border x:Name="MainStatus" Grid.Row="2" Background="#192B3B" Padding="14,9" BorderBrush="#354D63" BorderThickness="0,1,0,0">
+      <!-- Auto-sized version column preserves only the required space (capped at 110 DIP). -->
+      <Grid x:Name="MainStatusLayout">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <Grid x:Name="MainStatusMessages" Grid.Column="0" Margin="0,0,12,0">
+          <TextBlock x:Name="StatusMessageText" Text="{Binding Status}" ToolTip="{Binding Status}"
+                     Foreground="#B6CBDC" FontSize="13" TextWrapping="NoWrap"
+                     TextTrimming="CharacterEllipsis"/>
+          <TextBlock x:Name="LastSaveFailure" Visibility="Collapsed" Foreground="#FFD49F" FontSize="13"
+                     TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                     ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                     AutomationProperties.LiveSetting="Polite"/>
+        </Grid>
+        <TextBlock x:Name="AppVersionText" Grid.Column="1" HorizontalAlignment="Right"
+                   MaxWidth="110" VerticalAlignment="Bottom" TextAlignment="Right" TextTrimming="CharacterEllipsis"
+                   TextWrapping="NoWrap" FontSize="12" Foreground="#91A9BC"
+                   AutomationProperties.Name="KO Trans 2 버전"/>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

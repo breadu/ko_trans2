@@ -1,0 +1,35 @@
+{
+  "Name": "PP-OCRv5_server_det",
+  "Kind": "detection",
+  "Version": "PP-OCRv5",
+  "Languages": [
+    "en",
+    "ja",
+    "zh",
+    "zh-Hant"
+  ],
+  "Source": "https://huggingface.co/PaddlePaddle/PP-OCRv5_server_det",
+  "License": "Apache-2.0",
+  "File": "model.onnx",
+  "Sha256": "ce29b6081118e0bffacd1ba48286dbe51373ad2b3fc6aba9f17df6baeebf4620",
+  "ChannelOrder": "BGR",
+  "Layout": "NCHW",
+  "Decoder": "DB",
+  "Height": 48,
+  "MinWidth": 320,
+  "MaxWidth": 3200,
+  "Mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "Std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "Threshold": 0.3,
+  "BoxThreshold": 0.6,
+  "UnclipRatio": 1.5,
+  "DetectionLongSide": 960
+}

@@ -1,0 +1,36 @@
+{
+  "Package": "LibNMeCab.IpaDicBin",
+  "Version": "0.10.0",
+  "Files": [
+    {
+      "File": "AUTHORS",
+      "Bytes": 147,
+      "Sha256": "2A800402AB856B9963ED45EE59C8FDD11657E2E082EE48B0BEDCBFA53C902AF7"
+    },
+    {
+      "File": "char.bin",
+      "Bytes": 262496,
+      "Sha256": "81BBA502AE48FA005A374819F15E44452EB68086A8B323EC20A044D514400832"
+    },
+    {
+      "File": "COPYING",
+      "Bytes": 3866,
+      "Sha256": "24E38C404CDA1020AA0D96408AD15653BCD7CF95082C783FDDC3AE8E4A897339"
+    },
+    {
+      "File": "matrix.bin",
+      "Bytes": 3463716,
+      "Sha256": "EE44D7350CDCB680EBD699F83E121BE1DC63310F8832D55BCB537A068177611A"
+    },
+    {
+      "File": "sys.dic",
+      "Bytes": 49205956,
+      "Sha256": "C72DFC026322B6B8F6BBC8D90FD6706BEF9D566D9B36B061EAC8C494279FC427"
+    },
+    {
+      "File": "unk.dic",
+      "Bytes": 5690,
+      "Sha256": "A5ACCEF0D977C92F6FF5CC30A6428DF2DB8390B3D3A315273DE9851314FA0DB4"
+    }
+  ]
+}

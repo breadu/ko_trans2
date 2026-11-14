@@ -1,0 +1,208 @@
+[
+  {
+    "Name": "english",
+    "File": "english.png",
+    "Language": "en",
+    "Mode": "NVL",
+    "Vertical": false,
+    "Expected": "The journey begins with a single step.",
+    "Regions": [
+      {
+        "X": 90,
+        "Y": 117,
+        "Width": 602,
+        "Height": 33
+      }
+    ]
+  },
+  {
+    "Name": "small-english",
+    "File": "small-english.png",
+    "Language": "en",
+    "Mode": "NVL",
+    "Vertical": false,
+    "Expected": "Open the door and follow the light.",
+    "Regions": [
+      {
+        "X": 90,
+        "Y": 113,
+        "Width": 242,
+        "Height": 15
+      }
+    ]
+  },
+  {
+    "Name": "japanese",
+    "File": "japanese.png",
+    "Language": "ja",
+    "Mode": "NVL",
+    "Vertical": false,
+    "Expected": "今日は晴れです",
+    "Regions": [
+      {
+        "X": 90,
+        "Y": 118,
+        "Width": 252,
+        "Height": 33
+      }
+    ]
+  },
+  {
+    "Name": "vertical",
+    "File": "vertical.png",
+    "Language": "ja",
+    "Mode": "NVL",
+    "Vertical": true,
+    "Expected": "今日は晴れです\n\n明日も元気です",
+    "Regions": [
+      {
+        "X": 760,
+        "Y": 80,
+        "Width": 44,
+        "Height": 294
+      },
+      {
+        "X": 580,
+        "Y": 80,
+        "Width": 44,
+        "Height": 294
+      }
+    ]
+  },
+  {
+    "Name": "furigana",
+    "File": "furigana.png",
+    "Language": "ja",
+    "Mode": "NVL",
+    "Vertical": false,
+    "Expected": "今日は晴れです",
+    "Regions": [
+      {
+        "X": 90,
+        "Y": 118,
+        "Width": 252,
+        "Height": 33
+      }
+    ]
+  },
+  {
+    "Name": "background",
+    "File": "background.png",
+    "Language": "en",
+    "Mode": "NVL",
+    "Vertical": false,
+    "Expected": "Welcome to the ancient forest.",
+    "Regions": [
+      {
+        "X": 90,
+        "Y": 117,
+        "Width": 486,
+        "Height": 26
+      }
+    ]
+  },
+  {
+    "Name": "adv",
+    "File": "adv.png",
+    "Language": "en",
+    "Mode": "ADV",
+    "Vertical": false,
+    "Expected": "We must leave before sunrise.\nFollow me to the old bridge.",
+    "Regions": [
+      {
+        "X": 90,
+        "Y": 117,
+        "Width": 486,
+        "Height": 26
+      },
+      {
+        "X": 90,
+        "Y": 183,
+        "Width": 442,
+        "Height": 33
+      }
+    ]
+  },
+  {
+    "Name": "nvl",
+    "File": "nvl.png",
+    "Language": "en",
+    "Mode": "NVL",
+    "Vertical": false,
+    "Expected": "The forest was silent.\n\nA new story begins here.",
+    "Regions": [
+      {
+        "X": 90,
+        "Y": 117,
+        "Width": 340,
+        "Height": 26
+      },
+      {
+        "X": 89,
+        "Y": 293,
+        "Width": 397,
+        "Height": 33
+      }
+    ]
+  },
+  {
+    "Name": "japanese-multiline",
+    "File": "japanese-multiline.png",
+    "Language": "ja",
+    "Mode": "ADV",
+    "Vertical": false,
+    "Expected": "扉を開けてください\n一緒に行きましょう",
+    "Regions": [
+      {
+        "X": 90,
+        "Y": 118,
+        "Width": 324,
+        "Height": 33
+      },
+      {
+        "X": 90,
+        "Y": 185,
+        "Width": 324,
+        "Height": 32
+      }
+    ]
+  },
+  {
+    "Name": "reading-order",
+    "File": "reading-order.png",
+    "Language": "en",
+    "Mode": "NVL",
+    "Vertical": false,
+    "Expected": "First we find the key.\n\nThen we open the door.",
+    "Regions": [
+      {
+        "X": 90,
+        "Y": 117,
+        "Width": 330,
+        "Height": 33
+      },
+      {
+        "X": 90,
+        "Y": 293,
+        "Width": 380,
+        "Height": 33
+      }
+    ]
+  },
+  {
+    "Name": "desktop-crop",
+    "File": "desktop-crop.png",
+    "Language": "en",
+    "Mode": "ADV",
+    "Vertical": false,
+    "Expected": "The journey begins with a single step.",
+    "Regions": [
+      {
+        "X": 0,
+        "Y": 21,
+        "Width": 588,
+        "Height": 33
+      }
+    ]
+  }
+]

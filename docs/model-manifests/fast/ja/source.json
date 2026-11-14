@@ -1,0 +1,8 @@
+{
+  "repository": "PaddlePaddle/PP-OCRv5_mobile_rec_onnx",
+  "revision": "ed152b8b495f84de93cda5709d768548a9127622",
+  "license": "Apache-2.0",
+  "source_yaml": "inference.yml",
+  "dictionary": "PostProcess.character_dict plus CTC space, UTF-8 LF",
+  "app_requires_python": false
+}

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><RuntimeIdentifier>win-x64</RuntimeIdentifier></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../KoTrans.Core/KoTrans.Core.csproj" /></ItemGroup>
+  <ItemGroup><PackageReference Include="LLamaSharp" Version="0.30.0" /><PackageReference Include="LLamaSharp.Backend.Vulkan" Version="0.30.0" /></ItemGroup>
+  <PropertyGroup>
+    <!-- This executable is a build dependency and an independent process, never an in-process assembly reference. -->
+    <ShouldBeValidatedAsExecutableReference>false</ShouldBeValidatedAsExecutableReference>
+    <LocalWorkerCrtArgument Condition="'$(LocalWorkerCrtDirectory)' != ''">-CrtDirectory &quot;$(LocalWorkerCrtDirectory)&quot;</LocalWorkerCrtArgument>
+  </PropertyGroup>
+  <Target Name="CopyWorkerRuntime" AfterTargets="Build">
+    <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/../../scripts/Copy-LocalWorkerRuntime.ps1&quot; -Destination &quot;$(TargetDir).&quot; $(LocalWorkerCrtArgument)" />
+  </Target>
+  <Target Name="PublishWorkerRuntime" AfterTargets="Publish">
+    <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/../../scripts/Copy-LocalWorkerRuntime.ps1&quot; -Destination &quot;$(PublishDir).&quot; $(LocalWorkerCrtArgument)" />
+  </Target>
+</Project>

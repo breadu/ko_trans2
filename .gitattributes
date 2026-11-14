@@ -1,0 +1,9 @@
+* text=auto
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+# Keep the original NuGet notice bytes, including line endings.
+docs/licenses/dotnet-packages/*.txt -text
+
+# Preserve the byte-exact canonical license and upstream BSD notice.
+docs/licenses/Apache-2.0.txt -text
+docs/licenses/opencv/Intel-ITT-LICENSE.BSD -text

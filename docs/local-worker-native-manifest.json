@@ -1,0 +1,130 @@
+{
+  "backendVersion": "0.30.0",
+  "files": [
+    {
+      "file": "runtimes/win-x64/native/noavx/ggml-base.dll",
+      "sha256": "0E3DD8C95FCBD5564EEF3DBADF29360FFE425AF5FB4EAA97D7EFFC9EE1ADC1BB",
+      "bytes": 666624
+    },
+    {
+      "file": "runtimes/win-x64/native/noavx/ggml-cpu.dll",
+      "sha256": "BAE7321B8A695E50858414A5C24C3EC8E1D1101F92EC88A5F2AC4CBB32BA3232",
+      "bytes": 793600
+    },
+    {
+      "file": "runtimes/win-x64/native/noavx/ggml.dll",
+      "sha256": "1937EB1822CB063367638381F6C48E8032E6AC518D41FCE9075E6060BEF89DAF",
+      "bytes": 68608
+    },
+    {
+      "file": "runtimes/win-x64/native/noavx/llama.dll",
+      "sha256": "22B2533A8E5DCE24ADFB0B60C949CF414A428CC0EA960ED4471054D5887DEF0A",
+      "bytes": 2317312
+    },
+    {
+      "file": "runtimes/win-x64/native/noavx/mtmd.dll",
+      "sha256": "555891D39695FE8B9D0A5343C0BD6E5FE7A7DD2AD7DF28C9960174ED911DABFE",
+      "bytes": 1049600
+    },
+    {
+      "file": "runtimes/win-x64/native/avx/ggml-base.dll",
+      "sha256": "0E3DD8C95FCBD5564EEF3DBADF29360FFE425AF5FB4EAA97D7EFFC9EE1ADC1BB",
+      "bytes": 666624
+    },
+    {
+      "file": "runtimes/win-x64/native/avx/ggml-cpu.dll",
+      "sha256": "61D241D60E7AFE202F0DAAA6AE3DBC44B5696C302EE4EB67B09FBF9DF9B03190",
+      "bytes": 887808
+    },
+    {
+      "file": "runtimes/win-x64/native/avx/ggml.dll",
+      "sha256": "84AB6CFF1A9DF39363BEAF48F829EE75D2CAB7C9EC790A90E578252676B3E855",
+      "bytes": 68608
+    },
+    {
+      "file": "runtimes/win-x64/native/avx/llama.dll",
+      "sha256": "70744B60C5332C1A5BD003F2445A47CAB4D319D82304551EE6AFEB8D6817F159",
+      "bytes": 2317312
+    },
+    {
+      "file": "runtimes/win-x64/native/avx/mtmd.dll",
+      "sha256": "B15E9F0B96A343172F0239AFA39936E6F1A08AB9B5F74574F3F5A7353A8A2230",
+      "bytes": 1049600
+    },
+    {
+      "file": "runtimes/win-x64/native/avx2/ggml-base.dll",
+      "sha256": "0E3DD8C95FCBD5564EEF3DBADF29360FFE425AF5FB4EAA97D7EFFC9EE1ADC1BB",
+      "bytes": 666624
+    },
+    {
+      "file": "runtimes/win-x64/native/avx2/ggml-cpu.dll",
+      "sha256": "ACDE020B10BD70A124561ADFFA06299C688CDDB9251B189C97B645EA947BDBE2",
+      "bytes": 925696
+    },
+    {
+      "file": "runtimes/win-x64/native/avx2/ggml.dll",
+      "sha256": "8BA9F0CCA489CB4D8A8EA22EEC2097A2011DE311B71E8D817CC63815B7913B7E",
+      "bytes": 68608
+    },
+    {
+      "file": "runtimes/win-x64/native/avx2/llama.dll",
+      "sha256": "F7DB9CA6DE2B85679AC665F5A01DAD605F23263E6ACA70202A5B101A3BBA85D4",
+      "bytes": 2317312
+    },
+    {
+      "file": "runtimes/win-x64/native/avx2/mtmd.dll",
+      "sha256": "DBFAFC7A633FCD0B84833BE9D8A93FDFC8BB8BA6AB5353E972CB99A4B7C58A33",
+      "bytes": 1049600
+    },
+    {
+      "file": "runtimes/win-x64/native/avx512/ggml-base.dll",
+      "sha256": "EBBA3454BAFF56BC9CA59045BA2B84A919042EA1833EC1C5D2696BEADCA6EA1F",
+      "bytes": 666624
+    },
+    {
+      "file": "runtimes/win-x64/native/avx512/ggml-cpu.dll",
+      "sha256": "B2D011FF7910E7BC73C06EE32AB27FC0DDCEB9DDC2A93AA1AA924C5ABC91AEC1",
+      "bytes": 1031168
+    },
+    {
+      "file": "runtimes/win-x64/native/avx512/ggml.dll",
+      "sha256": "B9B0EEB0E14F6098AE20509C251E7EE206D390EA5811BE864DADBE564E8927E4",
+      "bytes": 68608
+    },
+    {
+      "file": "runtimes/win-x64/native/avx512/llama.dll",
+      "sha256": "D6150C74672D3BA613737FA5EDCA77B4EE16F65F0917C0AEA7C70E24875280DD",
+      "bytes": 2317312
+    },
+    {
+      "file": "runtimes/win-x64/native/avx512/mtmd.dll",
+      "sha256": "22B04D30573F697829C1D59452921A5C340C1A2586A9C595943825AD834F4A7A",
+      "bytes": 1049600
+    },
+    {
+      "file": "runtimes/win-x64/native/vulkan/ggml-base.dll",
+      "sha256": "FF8B0BE78FCB46CAF453AC23BC820CF2C6AEFE4E08D417E45BE0E07326DE46FD",
+      "bytes": 666624
+    },
+    {
+      "file": "runtimes/win-x64/native/vulkan/ggml-vulkan.dll",
+      "sha256": "BFAF6CD52C228C1CB5ADBCA5297CB879A8A0806572BF5B3E3509F33323348A54",
+      "bytes": 50736128
+    },
+    {
+      "file": "runtimes/win-x64/native/vulkan/ggml.dll",
+      "sha256": "C1193FABB393DC5B674511C7171B3B5362DFB744FD1DDC6D778FB9910EA11B81",
+      "bytes": 68608
+    },
+    {
+      "file": "runtimes/win-x64/native/vulkan/llama.dll",
+      "sha256": "34D73E76122F94ADE1A783CF0727DC56E1EDD472E5B899931EC5C8B1659658DA",
+      "bytes": 2317312
+    },
+    {
+      "file": "runtimes/win-x64/native/vulkan/mtmd.dll",
+      "sha256": "5A4E5365518CE3AF85B4E91719B1AE32C85161414956B8CC303D9B2FB93E1F14",
+      "bytes": 1049600
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "Library": "LibNMeCab.IpaDicBin",
+  "Version": "0.10.0",
+  "Tag": "v0.10.0",
+  "Commit": "9b64ce74d6c431c2555edc07786bc96ba949ddd3",
+  "Url": "https://codeload.github.com/komutan/NMeCab/zip/9b64ce74d6c431c2555edc07786bc96ba949ddd3",
+  "Sha256": "FA4203DB5C9ED45AF984F1E8E648286CDBFC6060D23F3F862151C6CE2AE4A29F",
+  "File": "NMeCab-v0.10.0-source.zip",
+  "NuGetDllSha256": "37BDA1B4FF0D321027AB2AB9D025394FE7620E626A82FF0CEA96666C45810D01"
+}

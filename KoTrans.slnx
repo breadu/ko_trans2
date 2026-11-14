@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KoTrans.App/KoTrans.App.csproj" />
+    <Project Path="src/KoTrans.Core/KoTrans.Core.csproj" />
+    <Project Path="src/KoTrans.LocalWorker/KoTrans.LocalWorker.csproj" />
+    <Project Path="src/KoTrans.Infrastructure/KoTrans.Infrastructure.csproj" />
+    <Project Path="src/KoTrans.Ocr/KoTrans.Ocr.csproj" />
+    <Project Path="src/KoTrans.OcrWorker/KoTrans.OcrWorker.csproj" />
+  </Folder>
+  <Project Path="tests/KoTrans.Tests/KoTrans.Tests.csproj" />
+  <Project Path="tests/KoTrans.WpfTests/KoTrans.WpfTests.csproj" />
+</Solution>

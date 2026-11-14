@@ -1,0 +1,117 @@
+[
+  {
+    "package": "CommunityToolkit.HighPerformance/8.4.2",
+    "license": "MIT",
+    "repository": "https://github.com/CommunityToolkit/dotnet",
+    "commit": "35dfe7b12da0e64384bfaec7ebc0883196a89f9f",
+    "copyright": "(c) .NET Foundation and Contributors. All rights reserved.",
+    "includedNotices": [
+      "License.md",
+      "ThirdPartyNotices.txt"
+    ]
+  },
+  {
+    "package": "LLamaSharp/0.30.0",
+    "license": "MIT",
+    "repository": "https://github.com/SciSharp/LLamaSharp",
+    "commit": "d03b6cbca3c66357e2ed9ee9d0324f5eaeabfd4f",
+    "copyright": "MIT, SciSharp STACK 2026",
+    "includedNotices": []
+  },
+  {
+    "package": "LLamaSharp.Backend.Cpu/0.30.0",
+    "license": "MIT",
+    "repository": "",
+    "commit": "",
+    "copyright": "Copyright 2023 The llama.cpp Authors. All rights reserved.",
+    "includedNotices": []
+  },
+  {
+    "package": "LLamaSharp.Backend.Vulkan/0.30.0",
+    "license": "MIT",
+    "repository": "",
+    "commit": "",
+    "copyright": "Copyright 2023 The llama.cpp Authors. All rights reserved.",
+    "includedNotices": []
+  },
+  {
+    "package": "LLamaSharp.Backend.Vulkan.Linux/0.30.0",
+    "license": "MIT",
+    "repository": "",
+    "commit": "",
+    "copyright": "Copyright 2023 The llama.cpp Authors. All rights reserved.",
+    "includedNotices": []
+  },
+  {
+    "package": "LLamaSharp.Backend.Vulkan.Windows/0.30.0",
+    "license": "MIT",
+    "repository": "",
+    "commit": "",
+    "copyright": "Copyright 2023 The llama.cpp Authors. All rights reserved.",
+    "includedNotices": []
+  },
+  {
+    "package": "Microsoft.Bcl.AsyncInterfaces/10.0.13",
+    "license": "MIT",
+    "repository": "https://github.com/dotnet/dotnet",
+    "commit": "4099f83977f4d29604a9aeb971fb0a7bc1d5f699",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "includedNotices": []
+  },
+  {
+    "package": "Microsoft.Bcl.Memory/10.0.13",
+    "license": "MIT",
+    "repository": "https://github.com/dotnet/dotnet",
+    "commit": "4099f83977f4d29604a9aeb971fb0a7bc1d5f699",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "includedNotices": []
+  },
+  {
+    "package": "Microsoft.Extensions.AI.Abstractions/10.11.0",
+    "license": "MIT",
+    "repository": "https://github.com/dotnet/extensions",
+    "commit": "25f07afa51034e37b334210642d7dc5f191c142d",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "includedNotices": []
+  },
+  {
+    "package": "Microsoft.Extensions.DependencyInjection.Abstractions/10.0.13",
+    "license": "MIT",
+    "repository": "https://github.com/dotnet/dotnet",
+    "commit": "4099f83977f4d29604a9aeb971fb0a7bc1d5f699",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "includedNotices": []
+  },
+  {
+    "package": "Microsoft.Extensions.Logging.Abstractions/10.0.13",
+    "license": "MIT",
+    "repository": "https://github.com/dotnet/dotnet",
+    "commit": "4099f83977f4d29604a9aeb971fb0a7bc1d5f699",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "includedNotices": []
+  },
+  {
+    "package": "System.Interactive.Async/7.0.1",
+    "license": "MIT",
+    "repository": "https://github.com/dotnet/reactive",
+    "commit": "96eed184a84471105d5d701a99e0b98629703d3f",
+    "copyright": "Copyright (c) .NET Foundation and Contributors.",
+    "includedNotices": []
+  },
+  {
+    "package": "System.Linq.Async/7.0.1",
+    "license": "MIT",
+    "repository": "https://github.com/dotnet/reactive",
+    "commit": "96eed184a84471105d5d701a99e0b98629703d3f",
+    "copyright": "Copyright (c) .NET Foundation and Contributors.",
+    "includedNotices": []
+  },
+  {
+    "package": "System.Numerics.Tensors/10.0.13",
+    "license": "MIT",
+    "repository": "https://github.com/dotnet/dotnet",
+    "commit": "4099f83977f4d29604a9aeb971fb0a7bc1d5f699",
+    "copyright": "© Microsoft Corporation. All rights reserved.",
+    "includedNotices": []
+  }
+]

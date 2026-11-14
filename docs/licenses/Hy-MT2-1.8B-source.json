@@ -1,0 +1,21 @@
+{
+  "repository": "tencent/Hy-MT2-1.8B-GGUF",
+  "revision": "a0c709d9fac510f2c807aa3af52872340dc37a4a",
+  "file": "Hy-MT2-1.8B-Q4_K_M.gguf",
+  "bytes": 1133080448,
+  "sha256": "dc5f44fcf1fa496ee7ad725982c0c8c553a4de00259b53af84c4b89fb0c06699",
+  "source": "https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/resolve/a0c709d9fac510f2c807aa3af52872340dc37a4a/Hy-MT2-1.8B-Q4_K_M.gguf",
+  "metadataSource": "https://huggingface.co/api/models/tencent/Hy-MT2-1.8B-GGUF?blobs=true",
+  "license": "Apache-2.0",
+  "licenseSource": "https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/raw/a0c709d9fac510f2c807aa3af52872340dc37a4a/LICENSE.txt",
+  "licenseSha256": "a1d52d448f81c584a47c583e19dfab2d3851c7c84431b07baee093c1113ed114",
+  "architecture": "hunyuan-dense",
+  "tokenizerModel": "gpt2",
+  "tokenizerPre": "hunyuan-dense",
+  "blocks": 32,
+  "bosTokenId": 120000,
+  "eosTokenId": 120020,
+  "evaluationOnly": false,
+  "integrationNote": "Optional lightweight model with explicit quality warning. Standard 7B remains the default.",
+  "verifiedDate": "2026-11-05"
+}

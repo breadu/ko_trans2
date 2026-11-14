@@ -1,0 +1,27 @@
+{
+  "packages": [
+    {
+      "version": "1.24.4",
+      "url": "https://www.nuget.org/packages/Microsoft.ML.OnnxRuntime.DirectML/1.24.4",
+      "id": "Microsoft.ML.OnnxRuntime.DirectML",
+      "sha256": "57E9F11B73437BEF7A309496135D4C1F96B1A8E9DDBA60013FA27BFC1D788681"
+    },
+    {
+      "version": "1.15.4",
+      "url": "https://www.nuget.org/packages/Microsoft.AI.DirectML/1.15.4",
+      "id": "Microsoft.AI.DirectML",
+      "sha256": "4E7CB7DDCE8CF837A7A75DC029209B520CA0101470FCDF275C1F49736A3615B9"
+    }
+  ],
+  "scope": "Unmodified official Windows x64 runtime; separate worker process, no CUDA/Python/SDK requirement for end users.",
+  "nativeFiles": {
+    "onnxruntime.dll": {
+      "sha256": "E7EEDEC6A6F26DC39DC948276A75EF6D2BEE3FFF944D874CEED0BBD3B97BFF40",
+      "fileVersion": "1.24.20260316.9.2d92497"
+    },
+    "DirectML.dll": {
+      "sha256": "9C9E6D822561C6C41B90E6994B3E8857CF1D66DBFB1E0C4C799C7C89B4E92DA1",
+      "fileVersion": "1.15.4+241025-1615.1.dml-1.15.fac7597"
+    }
+  }
+}

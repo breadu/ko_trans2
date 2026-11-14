@@ -1,0 +1,9 @@
+# Windows x64 / Python 3.12, isolated development environment only.
+paddlepaddle==3.1.1
+paddle2onnx==2.1.0
+onnx==1.17.0
+onnxruntime==1.24.3
+PyYAML==6.0.3
+setuptools==80.9.0
+# Fixture generation only, not required by the WPF app.
+Pillow==13.0.0

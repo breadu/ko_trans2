@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><UseWindowsForms>true</UseWindowsForms><ImplicitUsings>disable</ImplicitUsings></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../KoTrans.Core/KoTrans.Core.csproj" /><ProjectReference Include="../KoTrans.Ocr/KoTrans.Ocr.csproj" /></ItemGroup>
+  <ItemGroup><PackageReference Include="LibNMeCab" Version="0.10.2" /><PackageReference Include="LibNMeCab.IpaDicBin" Version="0.10.0" /></ItemGroup>
+</Project>
