@@ -24,9 +24,9 @@ internal sealed class SourceRegionSelector : Window
         var heading=new TextBlock {Text="원본 게임 화면에서 영역 지정\n대사 영역을 드래그한 뒤 확정을 누르세요. 확대 배율과 관계없이 같은 영역을 사용합니다.",Foreground=Brushes.White,TextWrapping=TextWrapping.Wrap,Margin=new(0,0,0,8)};
         DockPanel.SetDock(heading,Dock.Top);root.Children.Add(heading);
         var footer=new StackPanel();DockPanel.SetDock(footer,Dock.Bottom);root.Children.Add(footer);footer.Children.Add(status);
-        var actions=new WrapPanel {HorizontalAlignment=HorizontalAlignment.Right};footer.Children.Add(actions);
+        var actions=new WrapPanel {HorizontalAlignment=HorizontalAlignment.Right,ItemWidth=108,ItemHeight=46};footer.Children.Add(actions);
         var redraw=new Button {Content="새로 그리기"};var cancel=new Button {Content="취소 (Esc)"};
-        foreach(var button in new[] {confirm,redraw,cancel}) {button.Style=(Style)FindResource("DarkDisabledButton");button.Margin=new(4);button.MinWidth=90;actions.Children.Add(button);}
+        foreach(var button in new[] {confirm,redraw,cancel}) {button.Style=(Style)FindResource("DarkDisabledButton");button.Margin=new(4);actions.Children.Add(button);}
         var bitmap=BitmapSource.Create(frame.Width,frame.Height,96,96,PixelFormats.Bgr32,null,frame.Pixels.ToArray(),frame.Stride);bitmap.Freeze();
         canvas=new Canvas {Width=frame.Width,Height=frame.Height,Background=Brushes.Black,ClipToBounds=true,Cursor=Cursors.Cross};
         canvas.Children.Add(new Image {Source=bitmap,Width=frame.Width,Height=frame.Height,IsHitTestVisible=false});canvas.Children.Add(outline);

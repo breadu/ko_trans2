@@ -188,7 +188,15 @@ internal static class FirstRunWizardTests
             wizard.Previous.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));Complete(wizard.PendingAction);
             foreach(var size in new[]{new Size(490,595),new Size(340,520),new Size(300,380)}) {
                 wizard.ApplyAvailableSize(size);Layout(wizard,size.Width,size.Height);
-                Check(wizard.Next.ActualWidth>0 && wizard.Previous.ActualWidth>0,"Narrow wizard lost navigation");
+                var actions = new[] { wizard.Next, wizard.Previous, Named<Button>(wizard, "WizardRetry"), Named<Button>(wizard, "WizardCancel") };
+                var root = (UIElement)wizard.Content;
+                Check(wizard.Next.ActualWidth > 0 && actions.All(button =>
+                {
+                    var origin = button.TranslatePoint(new Point(), root);
+                    return button.RenderSize == wizard.Next.RenderSize
+                        && origin.X >= 0 && origin.X + button.ActualWidth <= size.Width
+                        && origin.Y >= 0 && origin.Y + button.ActualHeight <= size.Height;
+                }), "Narrow wizard action sizes differ or overflow the window");
             }
             main.ShowLauncher();main.WindowState=WindowState.Minimized;
             Click(wizard,"WizardCreateProfile");

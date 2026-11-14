@@ -15,7 +15,7 @@ internal sealed class RegionSelector : Window
     private readonly Grid header=new() {Name="SelectionHeader"};
     private readonly Grid footer=new() {Name="SelectionFooter"};
     private readonly StackPanel info=new() {Name="SelectionInfo",Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center};
-    private readonly WrapPanel actions=new() {HorizontalAlignment=HorizontalAlignment.Right};
+    private readonly WrapPanel actions=new() {HorizontalAlignment=HorizontalAlignment.Right,ItemWidth=98};
     private readonly TextBlock hint=new() {Text="드래그로 이동 · 가장자리 드래그로 크기 조절",Foreground=new SolidColorBrush(Color.FromRgb(166,189,210)),FontSize=12,VerticalAlignment=VerticalAlignment.Center,TextTrimming=TextTrimming.CharacterEllipsis};
     private readonly TextBlock dimensions=new() {Name="SelectionSize",Foreground=new SolidColorBrush(Color.FromRgb(194,211,227)),FontSize=13};
     private readonly TextBlock coordinates=new() {Name="SelectionPosition",Foreground=new SolidColorBrush(Color.FromRgb(194,211,227)),FontSize=13};
@@ -32,7 +32,6 @@ internal sealed class RegionSelector : Window
         AllowsTransparency=true;Background=Brushes.Transparent;Topmost=true;ShowInTaskbar=false;WindowStartupLocation=WindowStartupLocation.Manual;
         Cursor=Cursors.Cross;Content=canvas;
         confirm.Style=ToolbarButtonStyle(true);redraw.Style=ToolbarButtonStyle(false);cancel.Style=ToolbarButtonStyle(false);
-        confirm.MinWidth=62;redraw.MinWidth=86;cancel.MinWidth=90;
         foreach(var button in new[]{confirm,redraw,cancel}) {button.Height=36;button.Margin=new(8,0,0,0);button.Cursor=Cursors.Hand;}
         canvas.Children.Add(selection);
         header.ColumnDefinitions.Add(new ColumnDefinition {Width=GridLength.Auto});

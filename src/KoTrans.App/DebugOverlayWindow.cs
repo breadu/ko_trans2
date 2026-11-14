@@ -41,7 +41,13 @@ internal sealed class DebugOverlayWindow : Window
         var root = new DockPanel { Margin = new Thickness(12) };
         var toolbar = new WrapPanel(); DockPanel.SetDock(toolbar, Dock.Top); root.Children.Add(toolbar);
         var save = new Button { Name = "DebugSave", Content = "진단 저장" }; var close = new Button { Name = "DebugClose", Content = "닫기" };
-        toolbar.Children.Add(save); toolbar.Children.Add(pause); toolbar.Children.Add(close); toolbar.Children.Add(activity);
+        foreach (var button in new[] { save, pause, close })
+        {
+            button.Width = 96;
+            button.MinHeight = 36;
+            toolbar.Children.Add(button);
+        }
+        toolbar.Children.Add(activity);
         var notices = new StackPanel(); notices.Children.Add(exclusionWarning); notices.Children.Add(status); notices.Children.Add(folder); DockPanel.SetDock(notices, Dock.Bottom); root.Children.Add(notices);
         var body = new StackPanel(); body.Children.Add(Section("CAPTURE", capture)); body.Children.Add(Section("FRAME GATE", gate));
         ocrGroup = Group("DebugOcrGroup", ocrSummary, ocr, state.OcrExpanded);
