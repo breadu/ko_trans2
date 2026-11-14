@@ -217,6 +217,7 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                     cancellationToken.ThrowIfCancellationRequested();
                     return Recognize(crop, cancellationToken);
                 });
+                lines = DialogueInkFilter.Exclude(fullImage, lines, options);
                 recognitionTime += recoveryClock.Elapsed;
                 var terminalProposals = options.CollectMarkerLearning && GameMarkerGeometry.Supported(options)
                     ? TerminalMarkerScanner.Scan(frame,lines,proposeJoinedNeutral:true) : null;
