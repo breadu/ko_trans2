@@ -129,6 +129,10 @@ internal static class GameQaTests
         var recorder = new GameQaRecorder(); var id = recorder.Begin(Frame(), new("ja", "NVL", true, false), GameQaProfile.From(new()));
         recorder.Complete(id, Result() with { Models = identity }, "日本語", false); var snapshot = recorder.Snapshot!;
         Check(snapshot.Record.AlgorithmVersion == OcrAlgorithmRevision.Current, "QA omitted algorithm revision");
+        var v12 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v12-terminal-marker-tracking-20261106",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v12-terminal-marker-tracking-20261106" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v12, models)));
+        Check(GameQaReplay.Prepare(v12, models, useCurrentAlgorithm: true) is not null, "Explicit previous layout comparison rejected");
         var v5=snapshot with {Record=snapshot.Record with {AlgorithmVersion="ocr-layout-v5-20261030",Ocr=snapshot.Record.Ocr! with {Models=identity with {ImplementationVersion="ocr-layout-v5-20261030"}}}};
         var v6=snapshot with {Record=snapshot.Record with {AlgorithmVersion="ocr-layout-v6-20261031",Ocr=snapshot.Record.Ocr! with {Models=identity with {ImplementationVersion="ocr-layout-v6-20261031",FlushDenormalsToZero=false}}}};
         await Reject(()=>Task.FromResult(GameQaReplay.Prepare(v6,models)));

@@ -48,6 +48,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
     internal bool SuppressRepeatedAnimations { get; init; } = true;
     private readonly OcrRegionTracker ocrRegion = new();
     private readonly AdvTextRecovery advRecovery = new();
+    private readonly JapaneseAdvRecovery japaneseAdv = new();
     private readonly NvlOcrTracker nvlOcr = new();
     private readonly NvlTranslationPage nvlPage = new();
     private readonly RepeatedOcrCandidate repeatedCandidate = new();
@@ -520,6 +521,22 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
                             }
                             advRecovery.Observe(job.Frame,recognized,search is null);
                         }
+                        if (ocr.Capabilities.Roi && JapaneseAdvRecovery.Supports(ocrOptions)
+                            && japaneseAdv.Retry(job.Frame, recognized) is { } dialogueArea) {
+                            var retryOptions = ocrOptions with { SearchArea = dialogueArea, KeepLocalParagraph = true };
+                            lock (sync) {
+                                if (!IsCurrentOcrJob(job)) continue;
+                                if (gameQa is not null && qaProfile is not null)
+                                    qaId = gameQa.Begin(job.Frame, retryOptions, qaProfile, job.CaptureMs);
+                            }
+                            // Once the selected text is an unchanged external label, an error
+                            // must use the normal OCR failure path, not send that label to AI.
+                            recognized = await RecognizeMeasuredAsync(job.Frame, retryOptions, cancellation.Token,
+                                DebugReason.StaticLabelRecovery, job.Manual || job.Force).ConfigureAwait(false);
+                            // Empty recovery means no new dialogue, never a replay of the old text.
+                            inputResult = recognized; runOptions = retryOptions;
+                            region = null; markerRoi = false; search = dialogueArea; fullSearch = false;
+                        }
                         if (nvl) recognized=NvlOcrTracker.ArrangeRows(recognized,ocrOptions);
                         if (nvl && !job.Manual && !job.FullSearch) recognized = nvlOcr.Stabilize(job.Frame,recognized);
                         cancellation.Token.ThrowIfCancellationRequested(); text = TranslationPrompt.Normalize(recognized.Text);
@@ -553,6 +570,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
                                 candidateSince = Stopwatch.GetTimestamp();
                             }
                             if (nvl) nvlOcr.Observe(job.Frame, recognized);
+                            if (JapaneseAdvRecovery.Supports(ocrOptions)) japaneseAdv.Observe(job.Frame, recognized);
                             ocrRegion.Observe(job.Frame, recognized, region is not null);
                             var searched = !markerRoi && region is { } cropArea && runOptions.SearchArea is { } nested
                                 ? nested with { X = nested.X + cropArea.X, Y = nested.Y + cropArea.Y } : region ?? runOptions.SearchArea;
@@ -963,7 +981,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
             await Task.WhenAll(monitor ?? Task.CompletedTask, worker ?? Task.CompletedTask, manualDrained.Task).ConfigureAwait(false);
             await Task.WhenAll(translations).ConfigureAwait(false);
         }
-        finally { ocrResultCache.Clear(); lifetime.Dispose(); captureGate.Dispose(); monitorWake.Dispose(); recognizedFrame = null; ocrRegion.Reset(); nvlOcr.Reset(); nvlPage.Reset(); frames.Reset(); animations.Reset(); repeatedCandidate.Reset(); verifiedFrames.Clear(); verifiedOrder.Clear(); }
+        finally { ocrResultCache.Clear(); lifetime.Dispose(); captureGate.Dispose(); monitorWake.Dispose(); recognizedFrame = null; ocrRegion.Reset(); japaneseAdv.Reset(); nvlOcr.Reset(); nvlPage.Reset(); frames.Reset(); animations.Reset(); repeatedCandidate.Reset(); verifiedFrames.Clear(); verifiedOrder.Clear(); }
         // Shared OCR remains owned by the app. Native inference has drained, never forcibly terminated.
     }
 }

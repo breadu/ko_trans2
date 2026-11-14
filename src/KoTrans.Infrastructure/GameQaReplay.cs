@@ -14,7 +14,8 @@ public static class GameQaReplay
         // AlgorithmVersion belongs to the shared layout/pipeline contract. Engine implementation
         // versions and all weight hashes are checked separately by the registered replay loader.
         if (saved.AlgorithmVersion is { } revision && revision != OcrAlgorithmRevision.Current) {
-            bool known = revision is "ocr-layout-v9-terminal-stability-20261106" or "ocr-layout-v8-numeric-marker-20261106" or "ocr-layout-v7-ftz-20261102"
+            bool known = revision is "ocr-layout-v12-terminal-marker-tracking-20261106"
+                or "ocr-layout-v9-terminal-stability-20261106" or "ocr-layout-v8-numeric-marker-20261106" or "ocr-layout-v7-ftz-20261102"
                 or "ocr-layout-v6-20261031" or "ocr-layout-v5-20261030" or "ocr-layout-v4-20261030" or "ocr-layout-v3-20261030" || revision == "ocr-layout-v2-20261030" && saved.Options.SearchArea is null && saved.Options.DetectionLongSide == 0 && !saved.Options.KeepLocalParagraph;
             if (!useCurrentAlgorithm || !known) throw new InvalidDataException("OCR 알고리즘 버전이 다릅니다. 같은 버전을 사용하거나 알려진 이전 자료를 --current-algorithm으로 비교하세요.");
         }

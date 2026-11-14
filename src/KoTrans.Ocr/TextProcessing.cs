@@ -110,7 +110,7 @@ public static class LayoutProcessor
         var groups = new List<List<OcrLine>>();
         foreach (var line in lines.OrderBy(l => l.Bounds.Y).ThenBy(l => l.Bounds.X))
         {
-            var matches = groups.Where(g => g.Any(b => Neighbors(line, b))).ToArray();
+            var matches = groups.Where(g => g.Any(b => Neighbors(line, b, options))).ToArray();
             if (matches.Length == 0) groups.Add([line]);
             else { matches[0].Add(line); foreach (var other in matches.Skip(1)) { matches[0].AddRange(other); groups.Remove(other); } }
         }
@@ -146,15 +146,22 @@ public static class LayoutProcessor
         }
         return output;
     }
-    private static bool Neighbors(OcrLine a, OcrLine b)
+    private static bool Neighbors(OcrLine a, OcrLine b, OcrOptions options)
     {
         if (a.Vertical != b.Vertical) return false;
         var x = a.Bounds; var y = b.Bounds;
         double scale = Math.Max(a.Vertical ? x.Width : x.Height, b.Vertical ? y.Width : y.Height);
         double horizontalGap = Math.Max(0, Math.Max(x.X - y.X - y.Width, y.X - x.X - x.Width));
         double verticalGap = Math.Max(0, Math.Max(x.Y - y.Y - y.Height, y.Y - x.Y - x.Height));
+        if (!a.Vertical && options.Language == "ja" && options.ReadingMode == "ADV" && !options.Vertical
+            && Overlap(x.Y, x.Height, y.Y, y.Height) <= Math.Min(x.Height, y.Height) * .6
+            && (DetachedLabel(a, b) || DetachedLabel(b, a))) return false;
         return a.Vertical ? horizontalGap < scale * 1.8 && Overlap(x.Y, x.Height, y.Y, y.Height) > Math.Min(x.Height, y.Height) * .2
             : (verticalGap < scale * 1.4 && Overlap(x.X, x.Width, y.X, y.Width) > Math.Min(x.Width, y.Width) * .2)
                 || (horizontalGap < scale * 1.5 && Overlap(x.Y, x.Height, y.Y, y.Height) > Math.Min(x.Height, y.Height) * .6);
     }
+    // A tall/slanted decoration must not use its own oversized box to bridge
+    // into a normal-size dialogue paragraph. Inline and same-size Latin stay.
+    private static bool DetachedLabel(OcrLine label, OcrLine body) => JapaneseAdvRecovery.ShortLatin(label)
+        && JapaneseAdvRecovery.ReliableBody(body) && label.Bounds.Height > body.Bounds.Height * 1.4;
 }

@@ -7,6 +7,7 @@ if (args.Length == 4 && args[0] == "--local-model") { await LocalModelIntegratio
 if (args.Length == 4 && args[0] == "--local-model-light") { await LocalModelIntegrationTests.Run(args[1], args[2], args[3], LocalTranslationModel.Lightweight18B); return; }
 var suite = args.FirstOrDefault() ?? "Foundation";
 if (suite == "Translation") await AcceptedSourceVerificationTests.Run();
+if (suite == "Translation") await JapaneseAdvNoiseTests.Pipeline();
 if (suite == "Translation") await NvlLayoutTests.Run();
 if (suite == "Translation") await RepeatedOcrCandidateTests.Run();
 if (suite == "Translation") await TranslationContextIsolationTests.Run();
@@ -21,7 +22,7 @@ if (args.Length > 1 || suite is not ("Foundation" or "Image" or "Settings" or "O
     Console.Error.WriteLine("Select Foundation, Image, Settings, Ocr, Translation, Study, Stability or GameQa. Wpf and Desktop have separate runners.");
     Environment.ExitCode = 2; return;
 }
-if(suite == "Ocr") { await OcrExecutionPolicyTests.Run(); OcrAlgorithmTests.Run(); RubySuppressionTests.Run(); ContinuationMarkerTests.Run(); NvlOcrTests.Run(); await OcrEngineTests.Run(); await PaddlePresetTests.Run(); return; }
+if(suite == "Ocr") { JapaneseAdvNoiseTests.Run(); await OcrExecutionPolicyTests.Run(); OcrAlgorithmTests.Run(); RubySuppressionTests.Run(); ContinuationMarkerTests.Run(); NvlOcrTests.Run(); await OcrEngineTests.Run(); await PaddlePresetTests.Run(); return; }
 if(suite == "Translation") { await VerifiedFrameReuseTests.Run(); await RepeatedAnimationTests.Run(); await LocalTranslationTests.Run(); await Phase3Tests.Run(); await ProviderExtensionTests.Run(); await ProviderRoutingTests.Run(); await OllamaProtocolTests.Run(); await AuditRegressionTests.TranslationAsync(); await GameFixTests.Run(); await StreamingTests.Run(); await GeminiStreamingTests.Run(); await MuramasaTests.Run(); await AdvRecoveryTests.Run(); await NvlPipelineTests.Run(); await TriggerSessionTests.Run(); await OcrOnlyTests.Run(); await ModelListTests.Run(); return; }
 if(suite == "Study") { await Phase4Tests.Run(); WordDictionaryCoreTests.Japanese(); return; }
 if(suite == "Stability") { await StabilityTests.Run(); return; }

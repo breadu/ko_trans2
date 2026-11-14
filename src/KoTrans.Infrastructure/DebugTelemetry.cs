@@ -15,7 +15,7 @@ public enum DebugReason { None, Unchanged, Stabilizing, Ready, Probe, RepeatedAn
     CandidateSuperseded, EmptyText, TooLong, SameSource, AdvContinuation, NvlPage, NvlAppend, Accepted,
     Standard, Manual, Roi, NvlIncremental, NvlFullRetry, RoiFullRetry, AdvFullRetry, AdvRecovery,
     Cache, Streaming, Completed, Cancelled, CaptureUnavailable, OcrFailure, TranslationFailure, Stopped,
-    Connected, Missing, Ambiguous, Excluded, ExclusionFailed, NotMeasured, Displayed, Hidden, Rejected, Paused, LearnedMarker, ExactOcrCache, RepeatedTextConfirmed, SourceVerification }
+    Connected, Missing, Ambiguous, Excluded, ExclusionFailed, NotMeasured, Displayed, Hidden, Rejected, Paused, LearnedMarker, ExactOcrCache, RepeatedTextConfirmed, SourceVerification, StaticLabelRecovery }
 public enum DebugFrameAction { NotMeasured, Watching, CheckingStability, OcrQueued, Recognizing, OcrCompleted,
     ConfirmingText, Accepted, Reused, WaitingForTrigger, CaptureUnavailable, Stopped, CapturePaused }
 public enum DebugAiSourceRelation { NotMeasured, First, SameAsPrevious, DifferentFromPrevious }
@@ -295,10 +295,10 @@ public sealed class DebugTelemetry
         if (owner != session) return;
         if (!sessionStopped || current is null) CandidateCore();
         FreezeQuiet();
-        current = current! with { OcrCalls = current!.OcrCalls + 1, FullRetries = current.FullRetries + (kind is DebugReason.NvlFullRetry or DebugReason.RoiFullRetry or DebugReason.AdvFullRetry or DebugReason.AdvRecovery ? 1 : 0) };
+        current = current! with { OcrCalls = current!.OcrCalls + 1, FullRetries = current.FullRetries + (kind is DebugReason.NvlFullRetry or DebugReason.RoiFullRetry or DebugReason.AdvFullRetry or DebugReason.AdvRecovery or DebugReason.StaticLabelRecovery ? 1 : 0) };
         SaveCycle(current); values = values with { LogicalOcrCalls = values.LogicalOcrCalls + 1, Search = kind, OcrScheduled = false,
             OcrInProgress=!sessionStopped,FinalFrameAction=sessionStopped ? DebugFrameAction.Stopped : DebugFrameAction.Recognizing,ReuseReason=DebugReason.None };
-        if (kind is DebugReason.NvlFullRetry or DebugReason.RoiFullRetry or DebugReason.AdvFullRetry or DebugReason.AdvRecovery) Add(DebugCode.OCR_FULL_RETRY, kind);
+        if (kind is DebugReason.NvlFullRetry or DebugReason.RoiFullRetry or DebugReason.AdvFullRetry or DebugReason.AdvRecovery or DebugReason.StaticLabelRecovery) Add(DebugCode.OCR_FULL_RETRY, kind);
         Add(DebugCode.OCR_STARTED, kind);
     });
     public void OcrCompleted(long owner, OcrResult result, double ms) => Safe(()=> {
