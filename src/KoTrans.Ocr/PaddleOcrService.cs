@@ -207,6 +207,13 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                     return source with { X = source.X + area.X, Y = source.Y + area.Y };
                 }
                 lines = lines.Select(l => l with { Bounds = Shift(l.Bounds) }).ToList();
+                var recoveryClock = Stopwatch.StartNew();
+                lines = OverlappingRowRecovery.Recover(fullImage, lines, options, bounds => {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    using var crop = new Mat(fullImage, new Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height));
+                    return Recognize(crop, cancellationToken);
+                });
+                recognitionTime += recoveryClock.Elapsed;
                 var terminalProposals = options.CollectMarkerLearning && GameMarkerGeometry.Supported(options)
                     ? TerminalMarkerScanner.Scan(frame,lines,proposeJoinedNeutral:true) : null;
                 var referenceParent=terminalProposals is not null ? options.MarkerReference?.CurrentParent(frame,lines) : null;
