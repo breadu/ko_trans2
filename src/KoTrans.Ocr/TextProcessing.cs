@@ -61,8 +61,8 @@ public static class LayoutProcessor
         return small.Height < body.Height * .55 && small.Y + small.Height <= body.Y + body.Height * .3
             && body.Y - small.Y - small.Height < body.Height && Overlap(small.X, small.Width, body.X, body.Width) > small.Width * .65;
     }
-    // Supplemental recognition-time evidence for boxes enlarged by DB unclip. Keep the
-    // existing detector filter strict: this rule needs recognized text, not just size.
+    // Supplemental recognition-time evidence for boxes enlarged by DB unclip.
+    // This extension to strict ruby geometry needs recognized text, not just size.
     private static bool IsExpandedHorizontalRuby(OcrLine small, OcrLine body)
     {
         if (small.Vertical || body.Vertical || small.Confidence < .8 || body.Confidence < .8
@@ -106,16 +106,31 @@ public static class LayoutProcessor
         var lines = input.Where(l => !string.IsNullOrWhiteSpace(l.Text)).ToList();
         if (options.Language == "ja" && options.SuppressFurigana)
             lines = lines.Where(l => !lines.Any(other => other != l
-                && (IsRuby(l.Bounds, other.Bounds, other.Vertical) || IsExpandedHorizontalRuby(l, other)))).ToList();
+                && (IsRecognizedRuby(l, other) || IsExpandedHorizontalRuby(l, other)))).ToList();
+        var detached = new HashSet<OcrLine>();
+        if (options.Language == "ja" && options.ReadingMode == "ADV" && !options.Vertical) {
+            var bodies = lines.Where(JapaneseAdvRecovery.ReliableBody).ToArray();
+            foreach (var line in lines.Where(l => bodies.Any(b => DetachedLabel(l, b))
+                && !bodies.Any(b => Overlap(l.Bounds.Y, l.Bounds.Height, b.Bounds.Y, b.Bounds.Height)
+                    > Math.Min(l.Bounds.Height, b.Bounds.Height) * .6))) detached.Add(line);
+            foreach (var line in lines.Where(l => bodies.Any(b => DetachedAnnotation(l, b)))) detached.Add(line);
+        }
         var groups = new List<List<OcrLine>>();
         foreach (var line in lines.OrderBy(l => l.Bounds.Y).ThenBy(l => l.Bounds.X))
         {
-            var matches = groups.Where(g => g.Any(b => Neighbors(line, b, options))).ToArray();
+            // A short speaker row must not reconnect a known oversized decoration
+            // to the body through a second edge in the paragraph graph.
+            var matches = groups.Where(g => g.Any(b => detached.Contains(line) == detached.Contains(b)
+                && Neighbors(line, b, options))).ToArray();
             if (matches.Length == 0) groups.Add([line]);
             else { matches[0].Add(line); foreach (var other in matches.Skip(1)) { matches[0].AddRange(other); groups.Remove(other); } }
         }
         if (options.ReadingMode == "ADV" && groups.Count > 1)
         {
+            // Already identified detached decorations cannot win solely because
+            // their false detector boxes occupy more area than a short dialogue.
+            var eligible = groups.Where(g => g.Any(l => !detached.Contains(l))).ToList();
+            if (eligible.Count > 0) groups = eligible;
             double Score(List<OcrLine> g)
             {
                 double x = g.Average(l => l.Bounds.X + l.Bounds.Width / 2d) / imageWidth;
@@ -153,15 +168,29 @@ public static class LayoutProcessor
         double scale = Math.Max(a.Vertical ? x.Width : x.Height, b.Vertical ? y.Width : y.Height);
         double horizontalGap = Math.Max(0, Math.Max(x.X - y.X - y.Width, y.X - x.X - x.Width));
         double verticalGap = Math.Max(0, Math.Max(x.Y - y.Y - y.Height, y.Y - x.Y - x.Height));
-        if (!a.Vertical && options.Language == "ja" && options.ReadingMode == "ADV" && !options.Vertical
-            && Overlap(x.Y, x.Height, y.Y, y.Height) <= Math.Min(x.Height, y.Height) * .6
-            && (DetachedLabel(a, b) || DetachedLabel(b, a))) return false;
+        double rowScale = options.Language == "ja" && options.ReadingMode == "ADV" && !options.Vertical
+            ? Math.Min(x.Height, y.Height) : scale;
         return a.Vertical ? horizontalGap < scale * 1.8 && Overlap(x.Y, x.Height, y.Y, y.Height) > Math.Min(x.Height, y.Height) * .2
-            : (verticalGap < scale * 1.4 && Overlap(x.X, x.Width, y.X, y.Width) > Math.Min(x.Width, y.Width) * .2)
+            : (verticalGap < rowScale * 1.4 && Overlap(x.X, x.Width, y.X, y.Width) > Math.Min(x.Width, y.Width) * .2)
                 || (horizontalGap < scale * 1.5 && Overlap(x.Y, x.Height, y.Y, y.Height) > Math.Min(x.Height, y.Height) * .6);
     }
     // A tall/slanted decoration must not use its own oversized box to bridge
     // into a normal-size dialogue paragraph. Inline and same-size Latin stay.
     private static bool DetachedLabel(OcrLine label, OcrLine body) => JapaneseAdvRecovery.ShortLatin(label)
         && JapaneseAdvRecovery.ReliableBody(body) && label.Bounds.Height > body.Bounds.Height * 1.4;
+    // Keep a weak, tiny non-kana speck above the middle of a body row in its own
+    // group. Reading all detector boxes must not introduce formerly skipped noise.
+    private static bool DetachedAnnotation(OcrLine mark, OcrLine body) => mark.Confidence < .8 && !mark.Vertical
+        && mark.Text.Length is > 0 and <= 2
+        && mark.Text.All(c => char.IsAsciiLetterOrDigit(c) || char.IsPunctuation(c) || char.IsSymbol(c))
+        && mark.Bounds.Width < body.Bounds.Height * .55 && IsRuby(mark.Bounds, body.Bounds, false)
+        && mark.Bounds.X + mark.Bounds.Width / 2d > body.Bounds.X + body.Bounds.Height
+        && mark.Bounds.X + mark.Bounds.Width / 2d < body.Bounds.X + body.Bounds.Width - body.Bounds.Height;
+    private static bool IsRecognizedRuby(OcrLine reading, OcrLine body) => reading.Vertical == body.Vertical
+        && reading.Confidence >= .8 && body.Confidence >= .8
+        && reading.Text.All(c => c is >= '\u3041' and <= '\u3096' or '\u309D' or '\u309E'
+            or >= '\u30A1' and <= '\u30FA' or '\u30FC' or '\u30FD' or '\u30FE')
+        && body.Text.EnumerateRunes().Any(c => c.Value is >= 0x3400 and <= 0x4DBF or >= 0x4E00 and <= 0x9FFF
+            or >= 0xF900 and <= 0xFAFF or >= 0x20000 and <= 0x2FA1F)
+        && IsRuby(reading.Bounds, body.Bounds, body.Vertical);
 }

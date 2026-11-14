@@ -28,5 +28,5 @@ public sealed record GameQaRecord(int SchemaVersion, Guid RequestId, DateTimeOff
     // full input frame and reused, not inferred anew.
     public IReadOnlyList<OcrLine> NvlPrefix { get; init; } = [];
 }
-public static class OcrAlgorithmRevision { public const string Current = "ocr-layout-v13-static-label-recovery-20261114"; }
+public static class OcrAlgorithmRevision { public const string Current = "ocr-layout-v14-recognized-ruby-20261114"; }
 public sealed record GameQaSnapshot(ImageFrame Frame, GameQaRecord Record);

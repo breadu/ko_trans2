@@ -16,6 +16,13 @@ internal static class JapaneseAdvNoiseTests
         var arranged = LayoutProcessor.Arrange([badge, first, rest], options, 852, 192);
         Check(arranged.Count == 1 && arranged[0].Text == first.Text + rest.Text,
             "Tall detached Latin label bridged into the Japanese dialogue row");
+        var speck = new OcrLine("1", .61f, new(458,121,15,17));
+        Check(LayoutProcessor.Arrange([first, rest, speck], options, 852, 192).Single().Text == first.Text + rest.Text,
+            "Recognizing every detector box introduced a weak numeric speck above the middle of dialogue");
+        Check(LayoutProcessor.Arrange([first, rest, speck with {Confidence=.99f}], options, 852, 192)
+            .Any(l=>l.Text=="1"), "Confident independent number was removed");
+        Check(LayoutProcessor.Arrange([first, rest, speck with {Bounds=new(10,150,15,17)}], options, 852, 192)
+            .Any(l=>l.Text.Contains('1')), "Inline number was removed");
         OcrLine body = new("明日は公園を散歩しましょう。", .99f, new(0, 144, 584, 47));
         OcrLine middle = new("ab", .51f, new(201, 63, 80, 74));
         OcrLine upper = new("Q", .91f, new(200, 3, 44, 44));

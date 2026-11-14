@@ -158,7 +158,9 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                         learnedExclusions++;continue;
                     }
                     bool vertical = box.Bounds.Height > box.Bounds.Width * 1.5 && options.Language == "ja";
-                    if (options.SuppressFurigana && options.Language == "ja" && recognitionBoxes.Any(other => other != box && LayoutProcessor.IsRuby(box.Bounds, other.Bounds, other.Bounds.Height > other.Bounds.Width * 1.5))) continue;
+                    // A large false detector box can make a complete dialogue row
+                    // look like ruby. Recognize both before judging kana/kanji evidence.
+                    // LayoutProcessor performs the shared post-recognition suppression.
                     var recognitionBox = box;
                     if (options.Language == "ja" && !vertical && Math.Abs(box.Points[1].Y-box.Points[0].Y) <= 3) {
                         var extended = RecognitionTail.Extend(recognitionImage,box.Bounds,recognitionBoxes.Select(b=>b.Bounds).ToArray());
