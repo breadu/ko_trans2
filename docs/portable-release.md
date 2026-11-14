@@ -1,6 +1,6 @@
 # Portable ZIP 준비 및 업데이트 복구
 
-앱 프로젝트의 버전으로 정식 Windows x64 Portable ZIP을 만든다.
+앱 프로젝트의 버전으로 정식 Windows x64 Portable ZIP을 만든다. 루트 `KoTrans2.exe`에는 관리 DLL이 포함된다. 별도 네이티브 DLL, NMeCab, 두 워커 폴더와 기타 리소스는 압축을 푼 폴더에 함께 둔다.
 
 ## 사용자 데이터 계약
 

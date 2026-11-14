@@ -1,6 +1,6 @@
-# .NET 10 apphost bundle manifest, version 6.0. Keep this reader scoped to the PoC.
+# .NET 10 apphost bundle manifest, version 6.0. Used to validate the published Windows package.
 # Format: dotnet/runtime, Microsoft.NET.HostModel/Bundle (MIT).
-function Read-LayoutPocBundle([string]$Path) {
+function Read-SingleFileBundle([string]$Path) {
     $stream = [IO.File]::OpenRead($Path)
     $reader = [IO.BinaryReader]::new($stream)
     try {

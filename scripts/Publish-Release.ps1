@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$OutputDirectory, [Parameter(Mandatory)][string]$NMeCabSourceArchive, [Parameter(Mandatory)][string]$IpaDicSourceArchive, [string]$ModelsDirectory = "$PSScriptRoot/../models", [string]$Version = "", [switch]$LayoutPoc)
+param([Parameter(Mandatory)][string]$OutputDirectory, [Parameter(Mandatory)][string]$NMeCabSourceArchive, [Parameter(Mandatory)][string]$IpaDicSourceArchive, [string]$ModelsDirectory = "$PSScriptRoot/../models", [string]$Version = "")
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath("$PSScriptRoot/..")
 $output = [IO.Path]::GetFullPath($OutputDirectory)
@@ -23,8 +23,7 @@ $sourceCommit = (git -C $root rev-parse HEAD).Trim()
 if ($sourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Cannot determine source commit.' }
 git -C $root diff --quiet; if ($LASTEXITCODE -ne 0) { throw 'Commit source changes before preparing a public package.' }
 git -C $root diff --cached --quiet; if ($LASTEXITCODE -ne 0) { throw 'Commit staged changes before preparing a public package.' }
-$profile = if ($LayoutPoc) { 'FolderWinX64LayoutPoc' } else { 'FolderWinX64' }
-$publish = @('publish', "$root/src/KoTrans.App/KoTrans.App.csproj", '-c', 'Release', "-p:PublishProfile=$profile", '-p:DebugType=none', '-p:DebugSymbols=false', "-p:SourceRevisionId=$sourceCommit", '-o', $output, '--nologo')
+$publish = @('publish', "$root/src/KoTrans.App/KoTrans.App.csproj", '-c', 'Release', '-p:PublishProfile=SingleFileWinX64', '-p:DebugType=none', '-p:DebugSymbols=false', "-p:SourceRevisionId=$sourceCommit", '-o', $output, '--nologo')
 if ($Version) { Assert-PortableVersion $Version; $publish += "-p:Version=$Version" }
 dotnet @publish
 if ($LASTEXITCODE -ne 0) { throw 'Publish failed. Partial output was retained for inspection.' }
@@ -81,14 +80,8 @@ git -C $root diff --cached --quiet; if ($LASTEXITCODE -ne 0) { throw 'Staged sou
 $actual = (Get-Item -LiteralPath (Join-Path $output 'KoTrans2.exe')).VersionInfo.ProductVersion
 $publicVersion = $actual.Split('+')[0]; Assert-PortableVersion $publicVersion
 if ($actual -ne ($publicVersion+'+'+$sourceCommit) -or $publicVersion -cne $declaredVersion) { throw 'Published executable version/source differs from the app project.' }
-[ordered]@{product='KO Trans 2';version=$publicVersion;sourceCommit=$sourceCommit;buildUtc=[DateTimeOffset]::UtcNow.ToString('o');architecture='win-x64'} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'release.json') -Encoding utf8
-if ($LayoutPoc) {
-    $recordPath = Join-Path $output 'release.json'
-    $record = Get-Content -LiteralPath $recordPath -Raw | ConvertFrom-Json -AsHashtable
-    $record.layout = 'managed-bundle-poc'
-    $record | ConvertTo-Json | Set-Content -LiteralPath $recordPath -Encoding utf8
-}
-& "$PSScriptRoot/Test-ReleasePackage.ps1" -Path $output -LayoutPoc:$LayoutPoc
+[ordered]@{product='KO Trans 2';version=$publicVersion;sourceCommit=$sourceCommit;buildUtc=[DateTimeOffset]::UtcNow.ToString('o');architecture='win-x64';layout='managed-bundle'} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'release.json') -Encoding utf8
+& "$PSScriptRoot/Test-ReleasePackage.ps1" -Path $output
 [ordered]@{format=1;files=@(Get-PackageFiles $output)} | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'publish-files.json') -Encoding utf8
-& "$PSScriptRoot/Test-ReleasePackage.ps1" -Path $output -Portable -LayoutPoc:$LayoutPoc
+& "$PSScriptRoot/Test-ReleasePackage.ps1" -Path $output -Portable
 Write-Output "Prepared for manual release checks: $output. No GUI, installation, Git operation or main merge was performed."

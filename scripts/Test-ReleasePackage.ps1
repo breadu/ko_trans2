@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Path, [switch]$ModelsOnly, [switch]$AllowUnbundledSourceModels, [switch]$Portable, [switch]$LayoutPoc)
+param([Parameter(Mandatory)][string]$Path, [switch]$ModelsOnly, [switch]$AllowUnbundledSourceModels, [switch]$Portable)
 $ErrorActionPreference = 'Stop'
 if ($AllowUnbundledSourceModels -and !$ModelsOnly) { throw 'Unbundled local models are allowed only in a development model source, never a release package.' }
 $root = [IO.Path]::GetFullPath($Path)
@@ -85,25 +85,32 @@ $licensePaths = @(Get-ReleaseLicensePaths "$repo/docs/licenses")
 foreach ($relative in $licensePaths) {
     Assert-Hash "licenses/$relative" (Get-FileHash -LiteralPath "$repo/docs/licenses/$relative" -Algorithm SHA256).Hash
 }
-if (!$LayoutPoc) {
-foreach ($file in @('KoTrans2.exe','KoTrans2.dll','KoTrans2.deps.json','KoTrans2.runtimeconfig.json','coreclr.dll','hostfxr.dll','hostpolicy.dll','System.Private.CoreLib.dll','PresentationFramework.dll','PresentationCore.dll','wpfgfx_cor3.dll','Microsoft.ML.OnnxRuntime.dll','onnxruntime.dll','onnxruntime_providers_shared.dll','OpenCvSharp.dll','OpenCvSharpExtern.dll','LibNMeCab.dll','LibNMeCab.IpaDicBin.dll','IpaDic/sys.dic','IpaDic/unk.dic','IpaDic/char.bin','IpaDic/matrix.bin','IpaDic/COPYING','IpaDic/AUTHORS','USER-GUIDE.md')) { $null = Require-File $file }
-$runtime = Get-Content -LiteralPath (Require-File 'KoTrans2.runtimeconfig.json') -Raw | ConvertFrom-Json
-$deps = Get-Content -LiteralPath (Require-File 'KoTrans2.deps.json') -Raw | ConvertFrom-Json
+$layout = $null
+$metadataPath = Join-Path $root 'release.json'
+if (Test-Path -LiteralPath $metadataPath -PathType Leaf) {
+    $layout = (Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json).layout
+    if ($null -ne $layout -and $layout -cne 'managed-bundle') { throw 'Unknown package layout.' }
+}
+$singleFile = $layout -ceq 'managed-bundle'
+if (!$singleFile) {
+    foreach ($file in @('KoTrans2.exe','KoTrans2.dll','KoTrans2.deps.json','KoTrans2.runtimeconfig.json','coreclr.dll','hostfxr.dll','hostpolicy.dll','System.Private.CoreLib.dll','PresentationFramework.dll','PresentationCore.dll','wpfgfx_cor3.dll','Microsoft.ML.OnnxRuntime.dll','onnxruntime.dll','onnxruntime_providers_shared.dll','OpenCvSharp.dll','OpenCvSharpExtern.dll','LibNMeCab.dll','LibNMeCab.IpaDicBin.dll','IpaDic/sys.dic','IpaDic/unk.dic','IpaDic/char.bin','IpaDic/matrix.bin','IpaDic/COPYING','IpaDic/AUTHORS','USER-GUIDE.md')) { $null = Require-File $file }
+    $runtime = Get-Content -LiteralPath (Require-File 'KoTrans2.runtimeconfig.json') -Raw | ConvertFrom-Json
+    $deps = Get-Content -LiteralPath (Require-File 'KoTrans2.deps.json') -Raw | ConvertFrom-Json
 } else {
-    . "$PSScriptRoot/LayoutPoc.Bundle.ps1"
-    $bundle = Read-LayoutPocBundle (Require-File 'KoTrans2.exe')
+    . "$PSScriptRoot/SingleFile.Bundle.ps1"
+    $bundle = Read-SingleFileBundle (Require-File 'KoTrans2.exe')
     $runtime = $bundle.Runtime
     $deps = $bundle.Deps
-    $record = Test-PortableMetadata $root
-    if ($record.layout -cne 'managed-bundle-poc') { throw 'Missing PoC layout metadata.' }
+    $null = Test-PortableMetadata $root
+    $rootExecutables = @(Get-ChildItem -LiteralPath $root -File -Filter '*.exe')
+    if ($rootExecutables.Count -ne 1 -or $rootExecutables[0].Name -cne 'KoTrans2.exe') { throw 'Single-file packages must have exactly one root executable, KoTrans2.exe.' }
     foreach ($file in @('wpfgfx_cor3.dll','PresentationNative_cor3.dll','PenImc_cor3.dll','D3DCompiler_47_cor3.dll','vcruntime140_cor3.dll','onnxruntime.dll','onnxruntime_providers_shared.dll','OpenCvSharpExtern.dll','LibNMeCab.dll','LibNMeCab.IpaDicBin.dll','IpaDic/sys.dic','IpaDic/unk.dic','IpaDic/char.bin','IpaDic/matrix.bin','IpaDic/COPYING','IpaDic/AUTHORS','USER-GUIDE.md')) { $null = Require-File $file }
     foreach ($file in $items | Where-Object { !$_.PSIsContainer }) {
         $relative = [IO.Path]::GetRelativePath($root, $file.FullName).Replace('\', '/')
         if ($bundle.Entries.ContainsKey($relative) -or $relative -match '^(runtimes/|KoTrans\.LocalWorker\.|DirectML\.dll$)' -or $file.Extension -eq '.lib') {
-            throw "Unexpected duplicate or build-only file in PoC: $relative"
+            throw "Unexpected duplicate or build-only file in single-file package: $relative"
         }
     }
-    Assert-Hash 'OpenCvSharpExtern.dll' '1461B745BB2F579D86275433E596D94BB6DAB45579FFD91A2E9CE2AEE0AA9826'
 }
 $source = Get-Content -LiteralPath "$PSScriptRoot/../docs/licenses/NMeCab-source.json" -Raw | ConvertFrom-Json
 Assert-Hash "licenses/$($source.File)" $source.Sha256
@@ -136,8 +143,8 @@ if (@($runtime.runtimeOptions.includedFrameworks | Where-Object { $_.version -ne
 if ($deps.runtimeTarget.name -notmatch '/win-x64$') { throw 'Package must target win-x64.' }
 Assert-ReleaseHelp "$PSScriptRoot/../docs/help" (Join-Path $root 'help')
 foreach ($file in @('KoTrans2.exe','onnxruntime.dll','OpenCvSharpExtern.dll')) { Assert-PackageX64 (Require-File $file) }
-if (!$LayoutPoc) { Assert-PackageX64 (Require-File 'coreclr.dll') }
-elseif (Test-Path -LiteralPath (Join-Path $root 'coreclr.dll')) { throw 'Unexpected loose main CoreCLR in PoC.' }
+if (!$singleFile) { Assert-PackageX64 (Require-File 'coreclr.dll') }
+elseif (Test-Path -LiteralPath (Join-Path $root 'coreclr.dll')) { throw 'Unexpected loose main CoreCLR in single-file package.' }
 $forbidden = $items | Where-Object { !$_.PSIsContainer -and ($_.Name -match '^(settings.*\.json|.*\.secret|.*\.key|word\.idx|craft\.onnx|python.*|opencv_videoio_ffmpeg.*)$' -or $_.Extension -in @('.mp3','.py','.pdiparams')) }
 if ($forbidden) { throw 'Package contains user data, unknown models, Python or unused FFmpeg runtime.' }
 Write-Output 'PASS: self-contained x64 folder structure, native PE architecture, reviewed models, Japanese dictionary and notices. This is not an execution/desktop/clean-PC test or license certification.'

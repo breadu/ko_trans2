@@ -27,7 +27,15 @@ foreach ($file in @('KoTrans.OcrWorker.exe','onnxruntime.dll','DirectML.dll','Op
 if (Test-Path -LiteralPath (Join-Path $worker 'KoTrans.Ocr.dll')) { throw 'CPU OCR assembly must never be copied into the GPU worker.' }
 if (Test-Path -LiteralPath (Join-Path $root 'DirectML.dll')) { throw 'GPU runtime must not enter the main process native directory.' }
 if (!(Get-Item -LiteralPath (Join-Path $root 'onnxruntime.dll')).VersionInfo.FileVersion.StartsWith('1.31.0')) { throw 'CPU runtime must remain at the existing 1.31.0 version.' }
-if (!$MainDeps) { $MainDeps = Get-Content -LiteralPath (Join-Path $root 'KoTrans2.deps.json') -Raw | ConvertFrom-Json }
+if (!$MainDeps) {
+    $depsPath = Join-Path $root 'KoTrans2.deps.json'
+    if (Test-Path -LiteralPath $depsPath -PathType Leaf) {
+        $MainDeps = Get-Content -LiteralPath $depsPath -Raw | ConvertFrom-Json
+    } else {
+        . "$PSScriptRoot/SingleFile.Bundle.ps1"
+        $MainDeps = (Read-SingleFileBundle (Join-Path $root 'KoTrans2.exe')).Deps
+    }
+}
 if (!$mainDeps.libraries.'Microsoft.ML.OnnxRuntime/1.31.0' -or $mainDeps.libraries.'Microsoft.ML.OnnxRuntime.DirectML/1.24.4') { throw 'DirectML runtime leaked into the main application dependency graph.' }
 $items = @(Get-ChildItem -LiteralPath $worker -Recurse -File)
 if ($items | Where-Object { $_.Name -match 'opencv_videoio_ffmpeg|DirectML\.Debug|^python' -or $_.Extension -in @('.pdb','.lib','.onnx','.gguf','.py') }) { throw 'GPU worker contains unused development/model files.' }

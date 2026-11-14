@@ -6,7 +6,7 @@
 
 ## 배포 구성
 
-`FolderWinX64.pubxml`: win-x64, self-contained, .NET 10.0.14, 폴더형, single-file/trim/ReadyToRun 없음. LibNMeCab.dll은 교체 가능한 별도 파일로 유지한다. 런타임 버전을 바꿀 때 고지와 패키지 검사 기준도 함께 갱신한다. 사용하지 않는 FFmpeg video plugin은 Publish 목록에서 제외한다. OpenCvSharpExtern의 이미지 처리 기능은 유지한다.
+`SingleFileWinX64.pubxml`은 자체 포함 .NET 10.0.14 win-x64 배포용이다. 관리 DLL을 루트 `KoTrans2.exe`에 포함한다. WPF·ONNX·OpenCV 네이티브 DLL과 교체 가능한 NMeCab DLL은 별도 파일로 유지한다. 네이티브 DLL의 임시 추출, trimming, ReadyToRun은 사용하지 않는다. 런타임 버전을 바꿀 때 고지와 패키지 검사 기준도 함께 갱신한다. 사용하지 않는 FFmpeg video plugin은 Publish 목록에서 제외한다. OpenCvSharpExtern의 이미지 처리 기능은 유지한다.
 
 배포에는 v5 기본 3개, 고속 v5 2개, v6 Medium 2개까지 총 7개 ONNX가 필요하다. 고정 매니페스트·변환 기록·사전과 SHA-256을 검증한다. 개발 원본에 별도 파일이 있는 경우 Publish는 승인된 경로의 파일만 복사한다.
 
