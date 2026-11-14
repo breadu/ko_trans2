@@ -1,15 +1,15 @@
-param([Parameter(Mandatory)][string]$PublishDirectory,[Parameter(Mandatory)][string]$OutputDirectory,[Parameter(Mandatory)][string]$Version,[Parameter(Mandatory)][ValidatePattern('^[0-9a-f]{40}$')][string]$SourceCommit)
+param([Parameter(Mandatory)][string]$PublishDirectory,[Parameter(Mandatory)][string]$OutputDirectory,[Parameter(Mandatory)][string]$Version,[Parameter(Mandatory)][ValidatePattern('^[0-9a-f]{40}$')][string]$SourceCommit,[switch]$LayoutPoc)
 $ErrorActionPreference='Stop'
 . "$PSScriptRoot/PortableRelease.Common.ps1"
 Assert-PortableVersion $Version
 $source=[IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($PublishDirectory));$output=[IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($OutputDirectory))
 if($output -eq $source -or $output.StartsWith($source+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'ZIP output must be outside the publish folder.'}
-& "$PSScriptRoot/Test-ReleasePackage.ps1" -Path $source -Portable
+& "$PSScriptRoot/Test-ReleasePackage.ps1" -Path $source -Portable -LayoutPoc:$LayoutPoc
 $metadata=Test-PortableMetadata $source
 if($metadata.version -ne $Version -or $metadata.sourceCommit -ne $SourceCommit){throw 'Version/source arguments differ from published binaries.'}
 for($cursor=[IO.DirectoryInfo]::new($output);$null -ne $cursor;$cursor=$cursor.Parent){if($cursor.Exists -and ($cursor.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Output cannot traverse a link/junction.'}}
 [IO.Directory]::CreateDirectory($output) | Out-Null
-$folder="KoTrans2_v$Version";$zipName="${folder}_win-x64.zip";$destination=Join-Path $output $zipName
+$folder="KoTrans2_v$Version";$suffix=if($LayoutPoc){'-layout-poc'}else{''};$zipName="${folder}_win-x64${suffix}.zip";$destination=Join-Path $output $zipName
 foreach($suffix in @('','.sha256','.release.json')){if(Test-Path -LiteralPath ($destination+$suffix)){throw 'Existing ZIP or sidecar must not be overwritten.'}}
 Write-Output "Creating validated ZIP: $destination"
 $partial=$destination+'.'+[Guid]::NewGuid().ToString('N')+'.partial'

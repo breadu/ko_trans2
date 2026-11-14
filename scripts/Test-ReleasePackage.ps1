@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Path, [switch]$ModelsOnly, [switch]$AllowUnbundledSourceModels, [switch]$Portable)
+param([Parameter(Mandatory)][string]$Path, [switch]$ModelsOnly, [switch]$AllowUnbundledSourceModels, [switch]$Portable, [switch]$LayoutPoc)
 $ErrorActionPreference = 'Stop'
 if ($AllowUnbundledSourceModels -and !$ModelsOnly) { throw 'Unbundled local models are allowed only in a development model source, never a release package.' }
 $root = [IO.Path]::GetFullPath($Path)
@@ -85,8 +85,26 @@ $licensePaths = @(Get-ReleaseLicensePaths "$repo/docs/licenses")
 foreach ($relative in $licensePaths) {
     Assert-Hash "licenses/$relative" (Get-FileHash -LiteralPath "$repo/docs/licenses/$relative" -Algorithm SHA256).Hash
 }
+if (!$LayoutPoc) {
 foreach ($file in @('KoTrans2.exe','KoTrans2.dll','KoTrans2.deps.json','KoTrans2.runtimeconfig.json','coreclr.dll','hostfxr.dll','hostpolicy.dll','System.Private.CoreLib.dll','PresentationFramework.dll','PresentationCore.dll','wpfgfx_cor3.dll','Microsoft.ML.OnnxRuntime.dll','onnxruntime.dll','onnxruntime_providers_shared.dll','OpenCvSharp.dll','OpenCvSharpExtern.dll','LibNMeCab.dll','LibNMeCab.IpaDicBin.dll','IpaDic/sys.dic','IpaDic/unk.dic','IpaDic/char.bin','IpaDic/matrix.bin','IpaDic/COPYING','IpaDic/AUTHORS','USER-GUIDE.md')) { $null = Require-File $file }
 $runtime = Get-Content -LiteralPath (Require-File 'KoTrans2.runtimeconfig.json') -Raw | ConvertFrom-Json
+$deps = Get-Content -LiteralPath (Require-File 'KoTrans2.deps.json') -Raw | ConvertFrom-Json
+} else {
+    . "$PSScriptRoot/LayoutPoc.Bundle.ps1"
+    $bundle = Read-LayoutPocBundle (Require-File 'KoTrans2.exe')
+    $runtime = $bundle.Runtime
+    $deps = $bundle.Deps
+    $record = Test-PortableMetadata $root
+    if ($record.layout -cne 'managed-bundle-poc') { throw 'Missing PoC layout metadata.' }
+    foreach ($file in @('wpfgfx_cor3.dll','PresentationNative_cor3.dll','PenImc_cor3.dll','D3DCompiler_47_cor3.dll','vcruntime140_cor3.dll','onnxruntime.dll','onnxruntime_providers_shared.dll','OpenCvSharpExtern.dll','LibNMeCab.dll','LibNMeCab.IpaDicBin.dll','IpaDic/sys.dic','IpaDic/unk.dic','IpaDic/char.bin','IpaDic/matrix.bin','IpaDic/COPYING','IpaDic/AUTHORS','USER-GUIDE.md')) { $null = Require-File $file }
+    foreach ($file in $items | Where-Object { !$_.PSIsContainer }) {
+        $relative = [IO.Path]::GetRelativePath($root, $file.FullName).Replace('\', '/')
+        if ($bundle.Entries.ContainsKey($relative) -or $relative -match '^(runtimes/|KoTrans\.LocalWorker\.|DirectML\.dll$)' -or $file.Extension -eq '.lib') {
+            throw "Unexpected duplicate or build-only file in PoC: $relative"
+        }
+    }
+    Assert-Hash 'OpenCvSharpExtern.dll' '1461B745BB2F579D86275433E596D94BB6DAB45579FFD91A2E9CE2AEE0AA9826'
+}
 $source = Get-Content -LiteralPath "$PSScriptRoot/../docs/licenses/NMeCab-source.json" -Raw | ConvertFrom-Json
 Assert-Hash "licenses/$($source.File)" $source.Sha256
 $ipaSource = Get-Content -LiteralPath "$repo/docs/licenses/IpaDicBin-source.json" -Raw | ConvertFrom-Json
@@ -115,25 +133,25 @@ $dictionary = Get-Content -LiteralPath "$PSScriptRoot/../docs/ipa-manifest.json"
 foreach ($file in $dictionary.Files) { Assert-Hash "IpaDic/$($file.File)" $file.Sha256 }
 if ($runtime.runtimeOptions.framework -or $runtime.runtimeOptions.frameworks -or !$runtime.runtimeOptions.includedFrameworks) { throw 'Package is not self-contained.' }
 if (@($runtime.runtimeOptions.includedFrameworks | Where-Object { $_.version -ne '10.0.14' }).Count -gt 0) { throw 'Runtime version differs from reviewed 10.0.14 license/source notices.' }
-$deps = Get-Content -LiteralPath (Require-File 'KoTrans2.deps.json') -Raw | ConvertFrom-Json
 if ($deps.runtimeTarget.name -notmatch '/win-x64$') { throw 'Package must target win-x64.' }
 Assert-ReleaseHelp "$PSScriptRoot/../docs/help" (Join-Path $root 'help')
-foreach ($file in @('KoTrans2.exe','coreclr.dll','onnxruntime.dll','OpenCvSharpExtern.dll')) { Assert-PackageX64 (Require-File $file) }
+foreach ($file in @('KoTrans2.exe','onnxruntime.dll','OpenCvSharpExtern.dll')) { Assert-PackageX64 (Require-File $file) }
+if (!$LayoutPoc) { Assert-PackageX64 (Require-File 'coreclr.dll') }
+elseif (Test-Path -LiteralPath (Join-Path $root 'coreclr.dll')) { throw 'Unexpected loose main CoreCLR in PoC.' }
 $forbidden = $items | Where-Object { !$_.PSIsContainer -and ($_.Name -match '^(settings.*\.json|.*\.secret|.*\.key|word\.idx|craft\.onnx|python.*|opencv_videoio_ffmpeg.*)$' -or $_.Extension -in @('.mp3','.py','.pdiparams')) }
 if ($forbidden) { throw 'Package contains user data, unknown models, Python or unused FFmpeg runtime.' }
 Write-Output 'PASS: self-contained x64 folder structure, native PE architecture, reviewed models, Japanese dictionary and notices. This is not an execution/desktop/clean-PC test or license certification.'
 
 if (Test-Path -LiteralPath (Join-Path $root 'local-worker')) { & "$PSScriptRoot/Test-LocalWorkerPackage.ps1" -Path $root }
 elseif ($Portable) { throw 'Portable package must contain its local worker.' }
-if (Test-Path -LiteralPath (Join-Path $root 'ocr-worker')) { & "$PSScriptRoot/Test-DirectMlWorkerPackage.ps1" -Path $root }
+if (Test-Path -LiteralPath (Join-Path $root 'ocr-worker')) { & "$PSScriptRoot/Test-DirectMlWorkerPackage.ps1" -Path $root -MainDeps $deps }
 elseif ($Portable) { throw 'Portable package must contain its isolated DirectML OCR worker.' }
 if ($Portable) {
     $opencvHash = (Get-FileHash -LiteralPath (Require-File 'OpenCvSharpExtern.dll')).Hash
     Assert-Hash 'ocr-worker/OpenCvSharpExtern.dll' $opencvHash
-    foreach ($relative in @('KoTrans2.deps.json', 'ocr-worker/KoTrans.OcrWorker.deps.json')) {
-        if (Select-String -LiteralPath (Require-File $relative) -Pattern '"OpenCvSharp4.runtime.win/' -SimpleMatch -Quiet) {
-            throw "Stock OpenCvSharp native package in $relative."
-        }
+    $workerDeps = Get-Content -LiteralPath (Require-File 'ocr-worker/KoTrans.OcrWorker.deps.json') -Raw | ConvertFrom-Json
+    if (@($deps.libraries.PSObject.Properties.Name; $workerDeps.libraries.PSObject.Properties.Name) -like 'OpenCvSharp4.runtime.win/*') {
+        throw 'Stock OpenCvSharp native package in the app or worker dependency graph.'
     }
     . "$PSScriptRoot/PortableRelease.Common.ps1"
     $null = Test-PortableMetadata $root
