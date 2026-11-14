@@ -104,6 +104,10 @@ if (!$singleFile) {
     $null = Test-PortableMetadata $root
     $rootExecutables = @(Get-ChildItem -LiteralPath $root -File -Filter '*.exe')
     if ($rootExecutables.Count -ne 1 -or $rootExecutables[0].Name -cne 'KoTrans2.exe') { throw 'Single-file packages must have exactly one root executable, KoTrans2.exe.' }
+    $accessibility = [Reflection.AssemblyName]::GetAssemblyName((Require-File 'Accessibility.dll'))
+    if ($accessibility.FullName -cne 'Accessibility, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35') {
+        throw 'Unexpected WPF popup accessibility assembly.'
+    }
     foreach ($file in @('wpfgfx_cor3.dll','PresentationNative_cor3.dll','PenImc_cor3.dll','D3DCompiler_47_cor3.dll','vcruntime140_cor3.dll','onnxruntime.dll','onnxruntime_providers_shared.dll','OpenCvSharpExtern.dll','LibNMeCab.dll','LibNMeCab.IpaDicBin.dll','IpaDic/sys.dic','IpaDic/unk.dic','IpaDic/char.bin','IpaDic/matrix.bin','IpaDic/COPYING','IpaDic/AUTHORS','USER-GUIDE.md')) { $null = Require-File $file }
     foreach ($file in $items | Where-Object { !$_.PSIsContainer }) {
         $relative = [IO.Path]::GetRelativePath($root, $file.FullName).Replace('\', '/')
