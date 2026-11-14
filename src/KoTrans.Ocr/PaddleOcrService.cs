@@ -213,6 +213,10 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                     using var crop = new Mat(fullImage, new Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height));
                     return Recognize(crop, cancellationToken);
                 });
+                lines = DialoguePrefixRecovery.Recover(fullImage, lines, options, crop => {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return Recognize(crop, cancellationToken);
+                });
                 recognitionTime += recoveryClock.Elapsed;
                 var terminalProposals = options.CollectMarkerLearning && GameMarkerGeometry.Supported(options)
                     ? TerminalMarkerScanner.Scan(frame,lines,proposeJoinedNeutral:true) : null;

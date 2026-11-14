@@ -55,6 +55,22 @@ internal static class OverlappingRowRecoveryTests
             "A one-character second row was cropped away");
         Check(OverlappingRowRecovery.FindRow(image, new(-1, 0, 164, 57)) is null,
             "Invalid crop bounds were accepted");
+        using var inflated = new Mat(150,400,MatType.CV_8UC3,Scalar.Black);
+        for (int x=25;x<350;x+=25) Cv2.Rectangle(inflated,new(x,20,12,20),Scalar.White,-1);
+        const string bodyText = "「明日は静かな公園を歩きましょう。」";
+        var body = new OcrLine("ー"+bodyText,.94f,new(10,0,360,60));
+        var scenery = new OcrLine("C",.99f,new(30,80,60,45));
+        var refined = OverlappingRowRecovery.Recover(inflated,[body,scenery],options,_=>(bodyText,.99f));
+        Check(refined.Single(l=>l.Text==bodyText).Bounds.Height==28,
+            "Inflated single dialogue box kept its scenery-sized height");
+        Check(LayoutProcessor.Arrange(refined,options,400,150).Single().Text==bodyText,
+            "A background C was still appended beneath the verified dialogue row");
+        Check(LayoutProcessor.Arrange([refined.Single(l=>l.Text==bodyText),scenery with {Bounds=new(30,65,24,28)}],options,400,150)
+            .Any(l=>l.Text=="C"), "A real letter at normal dialogue height was stripped");
+        Check(OverlappingRowRecovery.Recover(inflated,[body],options,_=>("無関係な別の文です。",.99f)).Single()==body,
+            "Single-row refinement replaced a different sentence");
+        Check(OverlappingRowRecovery.Recover(inflated,[body],options,_=>(bodyText,.95f)).Single()==body,
+            "Single-row refinement accepted insignificant confidence improvement");
         Console.WriteLine($"Overlapping row recovery: {count} assertions passed (synthetic pixels and Mock recognition).");
     }
 }

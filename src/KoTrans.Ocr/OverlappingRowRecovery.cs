@@ -4,7 +4,8 @@ using OpenCvSharp;
 namespace KoTrans.Ocr;
 
 // A skewed detector fragment can include background above a short horizontal row.
-// Retry only overlapping, uncertain fragments with an independently visible glyph row.
+// Retry uncertain overlaps or a vertically inflated dialogue box only when the
+// pixels establish a single glyph row. Its true height also separates scenery.
 internal static class OverlappingRowRecovery
 {
     internal static List<OcrLine> Recover(Mat image, List<OcrLine> lines, OcrOptions options,
@@ -20,16 +21,19 @@ internal static class OverlappingRowRecovery
                 added = neighbors.Length > 0;
                 foreach (var line in neighbors) { group.Add(line); remaining.Remove(line); }
             } while (added);
-            if (group.Count < 2 || group.All(l => l.Confidence >= .85)
-                || !group.Any(l => Japanese(l.Text) >= 1)) continue;
+            bool overlap = group.Count >= 2 && group.Any(l => l.Confidence < .85);
+            bool inflated = group.Count == 1 && JapaneseAdvRecovery.ReliableBody(group[0])
+                && group[0].Bounds.Width / (double)group[0].Text.Length < group[0].Bounds.Height * .65;
+            if ((!overlap && !inflated) || !group.Any(l => Japanese(l.Text) >= 1)) continue;
             int x = group.Min(l => l.Bounds.X), y = group.Min(l => l.Bounds.Y);
             var bounds = new PixelRect(x, y, group.Max(l => l.Bounds.X + l.Bounds.Width) - x,
                 group.Max(l => l.Bounds.Y + l.Bounds.Height) - y);
             if (FindRow(image, bounds) is not { } crop) continue;
             attempts++;
             var result = recognize(crop);
-            if (result.Confidence < .9 || result.Confidence < group.Average(l => l.Confidence) + .05
+            if (result.Confidence < .9 || result.Confidence < group.Average(l => l.Confidence) + (overlap ? .05 : .02)
                 || result.Text.Length is < 2 or > 80 || Japanese(result.Text) < 2) continue;
+            if (inflated && TextProcessing.CharacterErrorRate(group[0].Text, result.Text) > .15) continue;
             foreach (var line in group) output.Remove(line);
             output.Add(new(TextProcessing.Normalize(result.Text, options.Language), result.Confidence, crop));
         }
