@@ -189,10 +189,10 @@ internal static class FirstRunWizardTests
             foreach(var size in new[]{new Size(490,595),new Size(340,520),new Size(300,380)}) {
                 wizard.ApplyAvailableSize(size);Layout(wizard,size.Width,size.Height);
                 var actions = new[] { wizard.Next, wizard.Previous, Named<Button>(wizard, "WizardRetry"), Named<Button>(wizard, "WizardCancel") };
-                var root = (UIElement)wizard.Content;
+                var wizardContent = (UIElement)wizard.Content;
                 Check(wizard.Next.ActualWidth > 0 && actions.All(button =>
                 {
-                    var origin = button.TranslatePoint(new Point(), root);
+                    var origin = button.TranslatePoint(new Point(), wizardContent);
                     return button.RenderSize == wizard.Next.RenderSize
                         && origin.X >= 0 && origin.X + button.ActualWidth <= size.Width
                         && origin.Y >= 0 && origin.Y + button.ActualHeight <= size.Height;
