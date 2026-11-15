@@ -63,7 +63,9 @@ public abstract class HttpTranslationService(HttpClient client) : ITranslationSe
     public int HttpAttempts => Volatile.Read(ref attempts);
     protected abstract HttpRequestMessage CreateRequest(TranslationRequest request);
     protected abstract string Parse(JsonElement json);
-    protected virtual Task<string> ReadStreamAsync(Stream stream, TranslationRequest request, CancellationToken token) => OpenAiStream.ReadAsync(stream,request.Progress,token);
+    protected virtual string NormalizeResponseText(string text, TranslationRequest request, bool complete) => text;
+    protected virtual Task<string> ReadStreamAsync(Stream stream, TranslationRequest request, CancellationToken token)
+        => OpenAiStream.ReadAsync(stream, request.Progress, token, (text, complete) => NormalizeResponseText(text, request, complete));
     protected virtual string TimeoutMessage(TranslationRequest request, bool headers) => "AI 요청 시간이 초과되었습니다. 처리 여부가 불명확하여 자동 재전송하지 않았습니다.";
     protected virtual string ConnectionMessage => "AI 서버 연결이 끊겼습니다. 처리 여부가 불명확하여 자동 재전송하지 않았습니다.";
     protected virtual bool CanRetryPreparationFailure(TranslationRequest request, TranslationException failure) => false;
@@ -120,7 +122,7 @@ public abstract class HttpTranslationService(HttpClient client) : ITranslationSe
                     buffer.Write(chunk, 0, length);
                 }
                 using var json = JsonDocument.Parse(buffer.ToArray());
-                var text = Parse(json.RootElement).Trim();
+                var text = NormalizeResponseText(Parse(json.RootElement), request, complete: true).Trim();
                 if (text.Length == 0) throw new TranslationException("AI가 번역문을 반환하지 않았습니다. 모델 및 응답 제한을 확인하세요.");
                 return new(text, clock.Elapsed, attempt);
             }
@@ -159,6 +161,9 @@ public abstract class HttpTranslationService(HttpClient client) : ITranslationSe
 }
 public sealed class OpenAiTranslationService(HttpClient client, string key) : HttpTranslationService(client)
 {
+    protected override string NormalizeResponseText(string text, TranslationRequest request, bool complete)
+        => OpenAiTranslationText.Normalize(text, request, complete);
+
     protected override HttpRequestMessage CreateRequest(TranslationRequest request)
     {
         var body = new Dictionary<string, object> { ["model"] = request.Options.Model, ["instructions"] = request.SystemPrompt, ["input"] = Messages(request, false), ["store"] = false, ["stream"] = request.OutputSchema is null && request.Progress is not null };

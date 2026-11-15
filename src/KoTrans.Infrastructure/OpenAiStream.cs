@@ -6,7 +6,8 @@ namespace KoTrans.Infrastructure;
 
 internal static class OpenAiStream
 {
-    public static async Task<string> ReadAsync(Stream source, Action<string>? progress, CancellationToken token)
+    public static async Task<string> ReadAsync(Stream source, Action<string>? progress, CancellationToken token,
+        Func<string, bool, string>? normalize = null)
     {
         var text = new StringBuilder(); long lastProgress = 0;
         await foreach (var value in ServerSentEvents.ReadAsync(source,token).ConfigureAwait(false))
@@ -21,6 +22,7 @@ internal static class OpenAiStream
                 if (lastProgress == 0 || System.Diagnostics.Stopwatch.GetElapsedTime(lastProgress).TotalMilliseconds >= 40)
                 {
                     var partial = text.ToString();
+                    if (normalize is not null) partial = normalize(partial, false);
                     if (!string.IsNullOrWhiteSpace(partial))
                     { progress?.Invoke(partial); lastProgress = System.Diagnostics.Stopwatch.GetTimestamp(); }
                 }
@@ -30,7 +32,9 @@ internal static class OpenAiStream
                 var response = item.GetProperty("response");
                 if (response.GetProperty("status").GetString() != "completed") break;
                 var final = string.Join("\n", response.GetProperty("output").EnumerateArray().Where(x => x.GetProperty("type").GetString() == "message")
-                    .SelectMany(x => x.GetProperty("content").EnumerateArray()).Where(x => x.GetProperty("type").GetString() == "output_text").Select(x => x.GetProperty("text").GetString())).Trim();
+                    .SelectMany(x => x.GetProperty("content").EnumerateArray()).Where(x => x.GetProperty("type").GetString() == "output_text").Select(x => x.GetProperty("text").GetString()));
+                if (normalize is not null) final = normalize(final, true);
+                final = final.Trim();
                 if (final.Length == 0) throw new TranslationException("AI가 번역문을 반환하지 않았습니다.");
                 token.ThrowIfCancellationRequested(); return final;
             }

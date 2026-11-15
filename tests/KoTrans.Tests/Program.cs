@@ -13,6 +13,7 @@ if (suite == "Translation") await RepeatedOcrCandidateTests.Run();
 if (suite == "Translation") await TranslationContextIsolationTests.Run();
 if (suite == "Translation") await AutomaticCaptureLifecycleTests.Run();
 if (suite == "Translation") await NvlPerformanceTests.Run();
+if (suite == "Translation") await OpenAiNewlineTests.Run();
 if (suite == "Image") { ScaledCaptureTests.Run(); await WindowPrintCaptureTests.Run(); }
 if (suite is "Settings" or "Foundation") await DebugDiagnosticsTests.Storage();
 if (suite == "Translation") { await OcrResultCacheTests.Run(); await DebugDiagnosticsTests.Pipeline(); await CapturePauseTests.Run(); await LearnedMarkerFrameTests.Run(); await GeneralMarkerBlinkTests.Run(); await LearnedMarkerCycleTests.Run(); }
