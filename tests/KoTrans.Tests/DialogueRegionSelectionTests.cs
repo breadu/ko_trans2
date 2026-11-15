@@ -23,6 +23,16 @@ internal static class DialogueRegionSelectionTests
         Check(DialogueRegionSelection.WithEndMargin(new(0, 10, 198, 32), [], 200) == new PixelRect(0, 10, 200, 32), "End margin escaped the frame");
         Check(DialogueRegionSelection.WithEndMargin(new(20, 10, 100, 32), [new(122, 10, 40, 32)], 200).Width == 105, "End margin crossed a neighbouring glyph crop");
         Check(DialogueRegionSelection.Select(input.Reverse().ToArray(), b => b).SequenceEqual(body), "Detector enumeration changed selection");
+        // A nearby but vertically displaced label must not redefine the start
+        // of a text row and thereby discard a wrapped continuation underneath.
+        foreach (int shift in new[] { -12, 12 }) {
+            PixelRect[] wrapped = [new(120, 50, 600, 40), new(130, 110, 200, 38), new(130, 168, 26, 36)];
+            var labelled = wrapped.Append(new PixelRect(38, 50 + shift, 60, 36)).ToArray();
+            Check(DialogueRegionSelection.Select(labelled, b => b).SequenceEqual(wrapped), "Displaced side label dropped a wrapped row");
+            Check(DialogueRegionSelection.Select(labelled.Reverse().ToArray(), b => b).SequenceEqual(wrapped), "Side label selection depends on detector order");
+        }
+        PixelRect[] jittered = [new(120, 50, 200, 40), new(335, 55, 200, 38), new(130, 110, 80, 38)];
+        Check(DialogueRegionSelection.Select(jittered, b => b).Count == 3, "Small same-baseline detector jitter split real text");
         PixelRect[] shortFirst = [new(40, 25, 40, 30), new(45, 65, 400, 30)];
         Check(DialogueRegionSelection.Select(shortFirst, b => b).SequenceEqual(shortFirst), "Short first row lost when second row is widest");
         PixelRect[] fragments = [new(170, 30, 75, 28), new(40, 32, 65, 28), new(110, 31, 55, 28), new(300, 100, 160, 28)];

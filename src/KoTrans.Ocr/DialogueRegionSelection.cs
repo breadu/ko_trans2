@@ -65,7 +65,10 @@ internal static class DialogueRegionSelection
     {
         double height = Math.Max(a.Height, b.Height);
         return height <= Math.Min(a.Height, b.Height) * 1.6
-            && Math.Abs(a.Y + a.Height / 2d - b.Y - b.Height / 2d) < height * .5
+            // Partial vertical overlap is not a shared text baseline. Otherwise
+            // a displaced side label moves the row's left edge and makes the
+            // following, correctly aligned dialogue row look unrelated.
+            && Math.Abs(a.Y + a.Height / 2d - b.Y - b.Height / 2d) < height * .25
             && Math.Max(0, Math.Max(a.X - b.X - b.Width, b.X - a.X - a.Width)) <= height;
     }
 
