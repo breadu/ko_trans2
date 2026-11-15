@@ -95,7 +95,7 @@ public static class StudyJson
 public static class ExplanationPrompt
 {
     public const string Version = "study-v1";
-    public const string OllamaVersion = "study-ollama-v2-source-vocabulary";
+    public const string OllamaVersion = "study-ollama-v3-korean-explanations";
     public static string DetectLanguage(string text, string fallback)
         => text.Any(c => c is >= '\u3040' and <= '\u30ff' or >= '\u3400' and <= '\u9fff') ? "ja"
             : text.Any(char.IsAsciiLetter) ? "en" : fallback;
@@ -124,11 +124,21 @@ public static class ExplanationPrompt
         """ + "\nSelected source language: " + language + "\nJSON schema:\n" + Schema.GetRawText();
     }
     // Do not alter working prompts or schema contracts for other providers.
-    // A local translation specialist may produce schema-valid Korean headwords.
+    // Reinforce both sides of the contract: original vocabulary and Korean teaching prose.
     public static string BuildOllama(string language) => Build(language) + "\n" + """
-        FIELD LANGUAGE RULES (essential): vocabulary[].word is the ORIGINAL English/Japanese word or phrase from the input, never its Korean translation. Dictionary/lemma forms are allowed. Select vocabulary from the ORIGINAL input, not from full_translation.
-        vocabulary[].meaning_src and examples[].en_or_jp must be in the selected source language. Only full_translation, sentence_explanation, meaning_ko, examples[].ko and tip are Korean explanations/translations.
-        For English input, word "journey" stays "journey", NOT "여정"; meaning_src is "an act of travelling", meaning_ko is "여정". For Japanese input, word "学校" stays "学校", NOT "학교".
+        FIELD LANGUAGE RULES (essential): 사용자는 한국어로 설명을 읽는 학습자입니다. JSON 항목 이름이 영어여도 설명 내용까지 영어로 쓰면 안 됩니다.
+        반드시 한국어로 작성할 항목: full_translation (전체 번역), sentence_explanation (문법·구조·뉘앙스 해설), vocabulary[].meaning_ko (한국어 뜻), vocabulary[].examples[].ko (예문 번역), vocabulary[].tip (사용 팁).
+        특히 sentence_explanation과 tip은 영어·일본어 설명이 아니라 자연스러운 한국어 문장으로 작성하세요. 설명 중 원어 단어나 구절을 인용하는 것은 허용합니다.
+        원어로 유지할 항목: vocabulary[].word는 이번 원문의 영어·일본어 단어 또는 구절(사전형 허용)이며 한국어 번역에서 단어를 뽑지 마세요. vocabulary[].meaning_src는 원어 뜻풀이, vocabulary[].examples[].en_or_jp는 원어 예문입니다. pronunciation은 원어의 발음 표기입니다.
+        다음 예는 항목별 언어와 형식만 참고하세요. 예의 내용을 복사하지 말고 이번 원문에 맞게 작성하며, 기본 단어·조사를 나열하지 말고 중요한 표현을 골라 설명하세요.
+        """ + "\n" + (language == "ja" ? """
+        일본어 원문: word, meaning_src, examples[].en_or_jp는 일본어로 작성하며 영어 뜻풀이로 바꾸지 마세요.
+        예: "word":"約束を守る", "meaning_src":"決めたことを実行する", "meaning_ko":"약속을 지키다", "tip":"守る는 약속이나 규칙을 지킨다는 뜻으로도 씁니다."
+        """ : """
+        영어 원문: word, meaning_src, examples[].en_or_jp는 영어로 작성하세요.
+        예: "word":"carry on", "meaning_src":"to continue doing something", "meaning_ko":"계속하다", "tip":"carry on은 어려움이 있어도 하던 일을 계속한다는 뜻으로 씁니다."
+        """) + "\n" + """
+        출력 전 한국어 설명 항목, 특히 문장 해설과 사용 팁이 한국어인지 확인하세요. 원어 뜻풀이·원어 예문과 한국어 해설을 구분하고, 요청한 JSON만 반환하세요.
         """;
     public static JsonElement Schema { get; } = JsonDocument.Parse("""
         {"type":"object","additionalProperties":false,"required":["full_translation","sentence_explanation","vocabulary"],"properties":{
