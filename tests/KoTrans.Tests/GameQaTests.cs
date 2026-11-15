@@ -129,6 +129,10 @@ internal static class GameQaTests
         var recorder = new GameQaRecorder(); var id = recorder.Begin(Frame(), new("ja", "NVL", true, false), GameQaProfile.From(new()));
         recorder.Complete(id, Result() with { Models = identity }, "日本語", false); var snapshot = recorder.Snapshot!;
         Check(snapshot.Record.AlgorithmVersion == OcrAlgorithmRevision.Current, "QA omitted algorithm revision");
+        var v24 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v24-shared-dialogue-region-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v24-shared-dialogue-region-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v24, models)));
+        Check(GameQaReplay.Prepare(v24, models, useCurrentAlgorithm: true) is not null, "Explicit v24 comparison rejected");
         var v23 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v23-dialogue-baseline-20261115",
             Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v23-dialogue-baseline-20261115" } } } };
         await Reject(() => Task.FromResult(GameQaReplay.Prepare(v23, models)));

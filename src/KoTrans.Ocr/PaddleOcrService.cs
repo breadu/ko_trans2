@@ -26,6 +26,7 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
     {
         if(!GameMarkerGeometry.ValidPatterns(options.MarkerPatterns))throw new ArgumentException("문장 끝 표시 학습 정보가 올바르지 않습니다.");
         if(!TerminalMarkerReference.Valid(options.MarkerReference))throw new ArgumentException("문장 끝 표시의 임시 본문 정보가 올바르지 않습니다.");
+        if (!DialogueLayoutHint.Valid(options.DialogueHint)) throw new ArgumentException("이전 대사 위치 정보가 올바르지 않습니다.");
         if (options.DetectionLongSide != 0 && options.DetectionLongSide is < 32 or > 1920) throw new ArgumentException("검출 해상도 범위를 확인하세요.");
         if (options.Language is not ("en" or "ja") || options.ReadingMode is not ("ADV" or "NVL")) throw new ArgumentException("지원 언어는 영어/일본어, 읽기 모드는 ADV/NVL입니다.");
     }
@@ -137,10 +138,18 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                 bool dialogueRegion = DialogueRegionSelection.Supported(options);
                 // DB unclip already provides vertical padding. Select first,
                 // then protect word ends with only a few horizontal pixels.
-                var selectedBoxes = dialogueRegion ? DialogueRegionSelection.Select(boxes, b => b.Bounds).ToList() : boxes;
+                var historyRows = new List<PixelRect>();
+                PixelRect? historyAnchor = null;
+                bool HistorySupports(PixelRect row, PixelRect anchor) {
+                    if (options.SearchArea is not null || options.DialogueHint is not { } hint || hint.Width != frame.Width
+                        || hint.Height != frame.Height || !hint.Supports(Shift(row), Shift(anchor))) return false;
+                    historyRows.Add(row); historyAnchor = anchor; return true;
+                }
+                var selectedBoxes = dialogueRegion ? DialogueRegionSelection.Select(boxes, b => b.Bounds, HistorySupports).ToList() : boxes;
                 var recognitionBoxes = JoinDetectionFragments(selectedBoxes);
                 var mergeTime = clock.Elapsed - detectionTime;
                 var lines = new List<OcrLine>();
+                var historyLines = new HashSet<OcrLine>();
                 List<OcrMarkerObservation>? markerDiagnostics = options.CollectMarkerDiagnostics ? [] : null;
                 int markerObservations = 0;
                 void ObserveMarker(OcrMarkerObservation item) {
@@ -157,6 +166,8 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                 foreach (var box in orderedBoxes)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    bool historySupported = historyRows.Any(r => box.Bounds.X >= r.X && box.Bounds.Y >= r.Y
+                        && box.Bounds.X + box.Bounds.Width <= r.X + r.Width && box.Bounds.Y + box.Bounds.Height <= r.Y + r.Height);
                     if (learnedPatterns is {Count:>0} && GameMarkerGeometry.CanExclude(frame,Shift(box.Bounds),
                         lines.Select(l=>l with {Bounds=Shift(l.Bounds)}).ToArray(),recognitionBoxes.Select(b=>Shift(b.Bounds)).ToArray(),learnedPatterns)) {
                         learnedExclusions++;continue;
@@ -209,9 +220,12 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                                 ObserveMarker(observation with {Bounds=Shift(observation.Bounds),ParentBounds=confirmedBody is null ? null : Shift(confirmedBody.Bounds)});
                         }
                     }
-                    if (text.Confidence >= .45 && !string.IsNullOrWhiteSpace(text.Text))
-                        lines.Add(new(TextProcessing.Normalize(text.Text, options.Language), text.Confidence, recognitionBox.Bounds, vertical));
+                    if (text.Confidence >= (historySupported ? .85 : .45) && !string.IsNullOrWhiteSpace(text.Text)) {
+                        var line = new OcrLine(TextProcessing.Normalize(text.Text, options.Language), text.Confidence, recognitionBox.Bounds, vertical);
+                        lines.Add(line); if (historySupported) historyLines.Add(line);
+                    }
                 }
+                DialogueRegionSelection.ConfirmHistoryRows(lines, historyLines, historyAnchor);
                 cancellationToken.ThrowIfCancellationRequested();
                 var recognitionTime = clock.Elapsed - detectionTime - mergeTime;
                 PixelRect Shift(PixelRect box) {
@@ -290,7 +304,7 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                 var bodyLines = dialogueRegion ? lines : ContinuationMarker.Exclude(lines, fullImage, options, markerDiagnostics is null ? null : ObserveMarker);
                 var arranged = dialogueRegion ? DialogueRegionSelection.Arrange(bodyLines) : LayoutProcessor.Arrange(bodyLines, layout, frame.Width, frame.Height);
                 return new OcrResult(arranged, clock.Elapsed)
-                { RecognitionCache=recognitionCache.Stats, Candidates = lines.ToArray(), MarkerDiagnostics=markerDiagnostics?.ToArray(), MarkerObservations=markerObservations, LearnedMarkerExclusions=learnedExclusions, MarkerBodyChecks=markerBodyChecks, MarkerBodyCacheHits=markerBodyCacheHits, TerminalMarkers=terminalSamples,
+                { DialogueHintUsed = historyRows.Count > 0, RecognitionCache=recognitionCache.Stats, Candidates = lines.ToArray(), MarkerDiagnostics=markerDiagnostics?.ToArray(), MarkerObservations=markerObservations, LearnedMarkerExclusions=learnedExclusions, MarkerBodyChecks=markerBodyChecks, MarkerBodyCacheHits=markerBodyCacheHits, TerminalMarkers=terminalSamples,
                   Models = identity, ModelLoadTime = loadTime, DetectionTime = detectionTime, RecognitionTime = recognitionTime,
                   PreprocessTime = conversionTime + preparation, DetectorInferenceTime = inference, DetectionPostprocessTime = post,
                   MergeTime = mergeTime, DetectorWidth = detectorSize.Width, DetectorHeight = detectorSize.Height,

@@ -11,7 +11,8 @@ internal static class DialogueRegionSelection
         && options.Language == "ja" && options.ReadingMode == "ADV" && !options.Vertical
         && options.SuppressFurigana && !options.KeepLocalParagraph;
 
-    internal static IReadOnlyList<T> Select<T>(IReadOnlyList<T> input, Func<T, PixelRect> bounds)
+    internal static IReadOnlyList<T> Select<T>(IReadOnlyList<T> input, Func<T, PixelRect> bounds,
+        Func<PixelRect, PixelRect, bool>? historySupports = null)
     {
         var rows = Rows(input.Where(item => bounds(item).IsValid).ToArray(), bounds);
         if (rows.Count == 0) return [];
@@ -34,12 +35,12 @@ internal static class DialogueRegionSelection
         foreach (var row in rows.OrderBy(row => Math.Abs(Union(row.Select(bounds)).Y - anchor.Y))) {
             if (ReferenceEquals(row, anchorRow)) continue;
             var box = Union(row.Select(bounds));
-            if (box.Height < anchor.Height * .65 || box.Height > anchor.Height * 1.5
-                || Math.Abs(box.X - anchor.X) > anchor.Height) continue;
+            if (box.Height < anchor.Height * .65 || box.Height > anchor.Height * 1.5) continue;
             // A continuation needs its own baseline, not a side fragment
             // overlapping the space between two already selected lines.
             if (selected.Any(other => !SeparateRows(box, Union(other.Select(bounds))))) continue;
-            if (selected.Any(other => GapY(box, Union(other.Select(bounds))) <= anchor.Height * 1.5))
+            if (selected.Any(other => GapY(box, Union(other.Select(bounds))) <= anchor.Height * 1.5)
+                && (SharesParagraphColumn(box, anchor) || historySupports?.Invoke(box, anchor) == true))
                 selected.Add(row);
         }
         return selected.SelectMany(row => row).OrderBy(item => bounds(item).Y).ThenBy(item => bounds(item).X).ToArray();
@@ -49,6 +50,15 @@ internal static class DialogueRegionSelection
         => Rows(lines, line => line.Bounds).OrderBy(row => row.Min(line => line.Bounds.Y))
             .Select(row => new OcrLine(string.Concat(row.OrderBy(line => line.Bounds.X).Select(line => line.Text)),
                 row.Average(line => line.Confidence), Union(row.Select(line => line.Bounds)))).ToArray();
+
+    // Old geometry cannot certify today's text: the current anchor must also
+    // have been read confidently without the supplementary history.
+    internal static void ConfirmHistoryRows(List<OcrLine> lines, IReadOnlySet<OcrLine> historyLines, PixelRect? anchor)
+    {
+        if (anchor is { } bounds && !lines.Any(l => !historyLines.Contains(l) && l.Confidence >= .85f
+            && Math.Abs(l.Bounds.Y + l.Bounds.Height / 2d - bounds.Y - bounds.Height / 2d) <= bounds.Height * .25))
+            lines.RemoveAll(historyLines.Contains);
+    }
 
     // A few pixels protect an edge glyph without widening the vertical band.
     // Do not cross the midpoint to another piece of the same physical row.
@@ -91,6 +101,19 @@ internal static class DialogueRegionSelection
 
     private static bool SeparateRows(PixelRect a, PixelRect b)
         => Math.Abs(a.Y + a.Height / 2d - b.Y - b.Height / 2d) >= Math.Max(a.Height, b.Height) * .75;
+
+    private static bool SharesParagraphColumn(PixelRect row, PixelRect anchor)
+    {
+        int startOffset = Math.Abs(row.X - anchor.X);
+        if (startOffset <= anchor.Height) return true;
+        // The anchor may start late when detection misses opening marks. A
+        // continuation can establish a slightly earlier paragraph start if at
+        // least half its horizontal span overlaps. Keep the original inward
+        // limit: small background labels below the text must not enter the block.
+        int overlap = Math.Min(row.X + row.Width, anchor.X + anchor.Width) - Math.Max(row.X, anchor.X);
+        return row.X < anchor.X && startOffset <= anchor.Height * 2
+            && overlap >= Math.Min(row.Width, anchor.Width) * .5;
+    }
 
     private static double GapY(PixelRect a, PixelRect b)
         => Math.Max(0, Math.Max(a.Y - b.Y - b.Height, b.Y - a.Y - a.Height));

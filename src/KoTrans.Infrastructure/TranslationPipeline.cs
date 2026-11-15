@@ -47,6 +47,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
     private readonly RepeatedAnimationGuard animations = new();
     internal bool SuppressRepeatedAnimations { get; init; } = true;
     private readonly OcrRegionTracker ocrRegion = new();
+    private readonly DialogueLayoutHistory dialogueLayout = new();
     private readonly AdvTextRecovery advRecovery = new();
     private readonly JapaneseAdvRecovery japaneseAdv = new();
     private readonly NvlOcrTracker nvlOcr = new();
@@ -446,6 +447,8 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
                             && ocr is ILearnedMarkerFrameGate { LearningStatus.Mode: not MarkerLearningMode.Off };
                         if(markerRoi)runOptions=ocrOptions with { SearchArea=region };
                         var input = !markerRoi && region is { } area ? OcrRegionTracker.Crop(job.Frame, area) : job.Frame;
+                        var layoutHint = dialogueLayout.Get(job.Frame, ocrOptions, job.Manual || job.Force || job.VerifyAcceptedSource);
+                        runOptions = runOptions with { DialogueHint = region is null && search is null ? layoutHint : null };
                         lock (sync)
                         {
                             if (!IsCurrentOcrJob(job)) continue;
@@ -549,6 +552,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
                             lock (sync) {
                                 if (!IsCurrentOcrJob(job)) continue;
                                 animations.Reset(); repeatedCandidate.Reset(); recognizedFrameHasFullCoverage = false;
+                                dialogueLayout.Reset();
                                 if (nvl) { nvlOcr.Observe(job.Frame, recognized); recognizedText = recognizedOriginal = null; verifiedFrames.Clear(); verifiedOrder.Clear(); }
                                 frames.Observe(recognized, job.Frame, fullSearch);
                                 gameQa?.Complete(qaId, inputResult, text, false, runOptions);
@@ -572,6 +576,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
                             if (nvl) nvlOcr.Observe(job.Frame, recognized);
                             if (JapaneseAdvRecovery.Supports(ocrOptions)) japaneseAdv.Observe(job.Frame, recognized);
                             ocrRegion.Observe(job.Frame, recognized, region is not null);
+                            dialogueLayout.Observe(job.Frame, recognized, ocrOptions, fullSearch);
                             var searched = !markerRoi && region is { } cropArea && runOptions.SearchArea is { } nested
                                 ? nested with { X = nested.X + cropArea.X, Y = nested.Y + cropArea.Y } : region ?? runOptions.SearchArea;
                             fullCoverage = fullSearch || recognizedFrameHasFullCoverage && recognizedFrame is not null
@@ -927,7 +932,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
             await Task.WhenAll(monitor ?? Task.CompletedTask, worker ?? Task.CompletedTask, manualDrained.Task).ConfigureAwait(false);
             await Task.WhenAll(translations).ConfigureAwait(false);
         }
-        finally { ocrResultCache.Clear(); lifetime.Dispose(); captureGate.Dispose(); monitorWake.Dispose(); recognizedFrame = null; ocrRegion.Reset(); japaneseAdv.Reset(); nvlOcr.Reset(); nvlPage.Reset(); frames.Reset(); animations.Reset(); repeatedCandidate.Reset(); verifiedFrames.Clear(); verifiedOrder.Clear(); }
+        finally { ocrResultCache.Clear(); lifetime.Dispose(); captureGate.Dispose(); monitorWake.Dispose(); recognizedFrame = null; ocrRegion.Reset(); dialogueLayout.Reset(); japaneseAdv.Reset(); nvlOcr.Reset(); nvlPage.Reset(); frames.Reset(); animations.Reset(); repeatedCandidate.Reset(); verifiedFrames.Clear(); verifiedOrder.Clear(); }
         // Shared OCR remains owned by the app. Native inference has drained, never forcibly terminated.
     }
 }

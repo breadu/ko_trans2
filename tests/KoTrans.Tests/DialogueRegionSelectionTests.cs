@@ -53,6 +53,17 @@ internal static class DialogueRegionSelectionTests
             var prefixed = wrapped.Append(Scale(new(20, 55, 60, 35))).ToArray();
             Check(DialogueRegionSelection.Select(prefixed, b => b).SequenceEqual(wrapped), "Aligned continuation lost to a distant leading fragment");
             Check(DialogueRegionSelection.Select(prefixed.Reverse().ToArray(), b => b).SequenceEqual(wrapped), "Shared paragraph start depends on detector order");
+            // Detection can omit the anchor's opening marks. An earlier start
+            // on a nearby overlapping row can still belong to the paragraph.
+            PixelRect[] indented = [Scale(new(200, 30, 600, 40)), Scale(new(130, 90, 260, 40))];
+            Check(DialogueRegionSelection.Select(indented, b => b).SequenceEqual(indented), "Shifted first-row start discarded the continuation");
+            Check(DialogueRegionSelection.Select(indented.Reverse().ToArray(), b => b).SequenceEqual(indented), "Indented rows depend on detector order");
+            PixelRect[] shortLead = [Scale(new(130, 30, 260, 40)), Scale(new(200, 90, 600, 40))];
+            Check(DialogueRegionSelection.Select(shortLead, b => b).SequenceEqual(shortLead), "Indented longest continuation discarded the first row");
+            PixelRect[] isolated = [indented[0], Scale(new(125, 90, 50, 40)), Scale(new(100, 150, 400, 40))];
+            Check(DialogueRegionSelection.Select(isolated, b => b).SequenceEqual(indented.Take(1)), "Relaxed row alignment admitted a detached or distant label");
+            var belowLabel = new[] { indented[0], Scale(new(250, 90, 120, 34)) };
+            Check(DialogueRegionSelection.Select(belowLabel, b => b).SequenceEqual(indented.Take(1)), "An inset background label widened the paragraph column");
         }
         PixelRect[] shortFirst = [new(40, 25, 40, 30), new(45, 65, 400, 30)];
         Check(DialogueRegionSelection.Select(shortFirst, b => b).SequenceEqual(shortFirst), "Short first row lost when second row is widest");
