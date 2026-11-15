@@ -505,7 +505,7 @@ internal sealed class StudyWindow : Window
                 FontSize = 21, FontWeight = FontWeights.SemiBold,
                 TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center
             });
-            if (!string.IsNullOrWhiteSpace(word.Pronunciation))
+            if (sourceLanguage == "en" && !string.IsNullOrWhiteSpace(word.Pronunciation))
             {
                 heading.Children.Add(new TextBlock
                 {

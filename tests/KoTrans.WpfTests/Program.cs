@@ -74,6 +74,7 @@ internal static class Program
                 Case("Game launch visibility, no translation and muted default profile color", GameLaunchTests.Controls);
                 Case("Game executable contract and existing-window matching", GameLaunchTests.Contract);
                 Case("Study rendering and state", WpfTests.Study);
+                Case("Study English-only side pronunciation and Japanese furigana", WpfTests.StudyPronunciationByLanguage);
                 Case("Ruby final-glyph to translation spacing", SubtitleUxTests.RubyGap);
                 Case("Subtitle named colors and live profile preview", SubtitleUxTests.PreviewAndColors);
                 Case("Original-only mode keeps automatic OCR and source subtitles", SubtitleUxTests.OriginalOnlyRecognition);
