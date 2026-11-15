@@ -79,6 +79,25 @@ internal static class OverlappingRowRecoveryTests
             "A background V remained because the dialogue was already high confidence");
         Check(OverlappingRowRecovery.Recover(inflated,[accurate],options,_=>(bodyText,.9f)).Single()==accurate,
             "Large confidence loss validated a tighter row");
+        using var touching = inflated.Clone();
+        Cv2.Rectangle(touching,new(40,2,5,18),Scalar.White,-1);
+        Check(OverlappingRowRecovery.FindRow(touching,accurate.Bounds) is null,
+            "Ambiguous upper ink bypassed the strict single-row evidence check");
+        var touched = OverlappingRowRecovery.Recover(touching,[accurate,scenery],options,_=>(bodyText,.98f));
+        Check(touched.Single(l=>l.Text==bodyText).Bounds==new PixelRect(10,16,360,28),
+            "A touching background highlight prevented exact-text geometry confirmation");
+        Check(LayoutProcessor.Arrange(touched,options,400,150).Single().Text==bodyText,
+            "Touching upper scenery kept an oversized false following row");
+        Check(OverlappingRowRecovery.Recover(touching,[accurate],options,_=>(bodyText.Replace("公園","広場"),1f)).Single()==accurate,
+            "Ambiguous upper ink allowed a different sentence to replace the body");
+        Check(OverlappingRowRecovery.Recover(touching,[accurate],options,_=>(bodyText,.9f)).Single()==accurate,
+            "Ambiguous upper ink accepted a low-confidence confirmation");
+        using var separateAbove = inflated.Clone();
+        Cv2.Rectangle(separateAbove,new(40,1,5,14),Scalar.White,-1);
+        Check(OverlappingRowRecovery.FindRow(separateAbove,accurate.Bounds,true) is null,
+            "A separate one-character upper row was cropped away");
+        Check(OverlappingRowRecovery.FindRow(twoRows,new(20,0,300,110),true) is null,
+            "Touching-ink fallback discarded a one-character second row");
         Console.WriteLine($"Overlapping row recovery: {count} assertions passed (synthetic pixels and Mock recognition).");
     }
 }

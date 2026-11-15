@@ -28,7 +28,12 @@ internal static class OverlappingRowRecovery
             int x = group.Min(l => l.Bounds.X), y = group.Min(l => l.Bounds.Y);
             var bounds = new PixelRect(x, y, group.Max(l => l.Bounds.X + l.Bounds.Width) - x,
                 group.Max(l => l.Bounds.Y + l.Bounds.Height) - y);
-            if (FindRow(image, bounds) is not { } crop) continue;
+            var proposed = FindRow(image, bounds);
+            bool exactOnly = proposed is null && inflated;
+            // A highlight touching the top of a real glyph row is not a separate
+            // line. This fallback may confirm geometry, never replace its text.
+            if (exactOnly) proposed = FindRow(image, bounds, allowTouchingAbove: true);
+            if (proposed is not { } crop) continue;
             attempts++;
             var result = recognize(crop);
             // An already accurate sentence cannot gain 0.02 confidence near 1.
@@ -38,6 +43,7 @@ internal static class OverlappingRowRecovery
                 && result.Confidence >= .9 && result.Confidence >= group[0].Confidence - .02) {
                 output.Remove(group[0]); output.Add(group[0] with {Bounds=crop}); continue;
             }
+            if (exactOnly) continue;
             if (result.Confidence < .9 || result.Confidence < group.Average(l => l.Confidence) + (overlap ? .05 : .02)
                 || result.Text.Length is < 2 or > 80 || Japanese(result.Text) < 2) continue;
             if (inflated && TextProcessing.CharacterErrorRate(group[0].Text, result.Text) > .15) continue;
@@ -58,7 +64,7 @@ internal static class OverlappingRowRecovery
             && Math.Min(x.Y + x.Height, y.Y + y.Height) - Math.Max(x.Y, y.Y) > Math.Min(x.Height, y.Height) * .65;
     }
 
-    internal static PixelRect? FindRow(Mat image, PixelRect bounds)
+    internal static PixelRect? FindRow(Mat image, PixelRect bounds, bool allowTouchingAbove = false)
     {
         if (!bounds.IsValid || bounds.X < 0 || bounds.Y < 0 || bounds.Width < bounds.Height * 2
             || bounds.X + (long)bounds.Width > image.Width || bounds.Y + (long)bounds.Height > image.Height) return null;
@@ -87,7 +93,8 @@ internal static class OverlappingRowRecovery
         int bottom = selected.Max(g => g.Y + g.Height), top = selected.Min(g => g.Y);
         // Never collapse two visible lines into one retry crop.
         if (rows.Any(row => Math.Abs(row.Max(g => g.Y + g.Height) - bottom) > height * .7)) return null;
-        if (glyphs.Any(g => g.Height >= height * .65 && Math.Abs(g.Y + g.Height - bottom) > height * .7)) return null;
+        if (glyphs.Any(g => g.Height >= height * .65 && Math.Abs(g.Y + g.Height - bottom) > height * .7
+            && !(allowTouchingAbove && g.Y < top && g.Y + g.Height >= top))) return null;
         int padding = Math.Max(2, (int)Math.Ceiling(height * .2));
         top = Math.Max(0, top - padding); bottom = Math.Min(bounds.Height, bottom + padding);
         if (bottom - top > bounds.Height * .75) return null;
