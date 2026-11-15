@@ -134,7 +134,11 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                 if (usedPadding is not null)
                     boxes = boxes.Where(b=>DetectionBorder.Restore(b.Bounds,usedPadding,image.Width,image.Height) is not null).ToList();
                 var detectionTime = clock.Elapsed;
-                var recognitionBoxes = JoinDetectionFragments(boxes);
+                bool dialogueRegion = DialogueRegionSelection.Supported(options);
+                // DB unclip already provides vertical padding. Select first,
+                // then protect word ends with only a few horizontal pixels.
+                var selectedBoxes = dialogueRegion ? DialogueRegionSelection.Select(boxes, b => b.Bounds).ToList() : boxes;
+                var recognitionBoxes = JoinDetectionFragments(selectedBoxes);
                 var mergeTime = clock.Elapsed - detectionTime;
                 var lines = new List<OcrLine>();
                 List<OcrMarkerObservation>? markerDiagnostics = options.CollectMarkerDiagnostics ? [] : null;
@@ -157,12 +161,21 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                         lines.Select(l=>l with {Bounds=Shift(l.Bounds)}).ToArray(),recognitionBoxes.Select(b=>Shift(b.Bounds)).ToArray(),learnedPatterns)) {
                         learnedExclusions++;continue;
                     }
-                    bool vertical = box.Bounds.Height > box.Bounds.Width * 1.5 && options.Language == "ja";
+                    bool vertical = !dialogueRegion && box.Bounds.Height > box.Bounds.Width * 1.5 && options.Language == "ja";
                     // A large false detector box can make a complete dialogue row
                     // look like ruby. Recognize both before judging kana/kanji evidence.
                     // LayoutProcessor performs the shared post-recognition suppression.
                     var recognitionBox = box;
-                    if (options.Language == "ja" && !vertical && Math.Abs(box.Points[1].Y-box.Points[0].Y) <= 3) {
+                    if (dialogueRegion) {
+                        var extended = DialogueRegionSelection.WithEndMargin(box.Bounds, recognitionBoxes.Select(b => b.Bounds).ToArray(), recognitionImage.Width);
+                        var points = box.Points.ToArray();
+                        int left = box.Bounds.X - extended.X, right = extended.X + extended.Width - box.Bounds.X - box.Bounds.Width;
+                        points[0].X -= left; points[3].X -= left;
+                        points[1].X = Math.Min(recognitionImage.Width - 1, points[1].X + right);
+                        points[2].X = Math.Min(recognitionImage.Width - 1, points[2].X + right);
+                        recognitionBox = new(points, extended);
+                    }
+                    if (!dialogueRegion && options.Language == "ja" && !vertical && Math.Abs(box.Points[1].Y-box.Points[0].Y) <= 3) {
                         var extended = RecognitionTail.Extend(recognitionImage,box.Bounds,recognitionBoxes.Select(b=>b.Bounds).ToArray());
                         if (extended != box.Bounds) {
                             var points = box.Points.ToArray();
@@ -172,7 +185,7 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                     }
                     using var crop = Crop(recognitionImage, recognitionBox.Points, vertical);
                     var text = Recognize(crop, cancellationToken);
-                    if (options.Language == "ja" && !vertical && Math.Abs(recognitionBox.Points[1].Y-recognitionBox.Points[0].Y) <= 3) {
+                    if (!dialogueRegion && options.Language == "ja" && !vertical && Math.Abs(recognitionBox.Points[1].Y-recognitionBox.Points[0].Y) <= 3) {
                         var proposed = ContinuationMarker.SeparateTail(recognitionImage, recognitionBox.Bounds, out var decision);
                         var originalLine = markerDiagnostics is null ? null : new OcrLine(text.Text,text.Confidence,recognitionBox.Bounds);
                         OcrLine? confirmedBody = null;
@@ -208,16 +221,18 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                 }
                 lines = lines.Select(l => l with { Bounds = Shift(l.Bounds) }).ToList();
                 var recoveryClock = Stopwatch.StartNew();
-                lines = OverlappingRowRecovery.Recover(fullImage, lines, options, bounds => {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    using var crop = new Mat(fullImage, new Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height));
-                    return Recognize(crop, cancellationToken);
-                });
-                lines = DialoguePrefixRecovery.Recover(fullImage, lines, options, crop => {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    return Recognize(crop, cancellationToken);
-                });
-                lines = DialogueInkFilter.Exclude(fullImage, lines, options);
+                if (!dialogueRegion) {
+                    lines = OverlappingRowRecovery.Recover(fullImage, lines, options, bounds => {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        using var crop = new Mat(fullImage, new Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height));
+                        return Recognize(crop, cancellationToken);
+                    });
+                    lines = DialoguePrefixRecovery.Recover(fullImage, lines, options, crop => {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        return Recognize(crop, cancellationToken);
+                    });
+                    lines = DialogueInkFilter.Exclude(fullImage, lines, options);
+                }
                 recognitionTime += recoveryClock.Elapsed;
                 var terminalProposals = options.CollectMarkerLearning && GameMarkerGeometry.Supported(options)
                     ? TerminalMarkerScanner.Scan(frame,lines,proposeJoinedNeutral:true) : null;
@@ -272,8 +287,8 @@ public sealed class PaddleOcrService(string modelDirectory, OcrExecutionOptions?
                     lines.RemoveAll(l=>ReferenceEquals(l,parent)||noise.Contains(l));lines.Add(bodyLine);learnedExclusions++;
                 }
                 var layout = options.KeepLocalParagraph ? options with { ReadingMode = "NVL" } : options;
-                var bodyLines = ContinuationMarker.Exclude(lines, fullImage, options, markerDiagnostics is null ? null : ObserveMarker);
-                var arranged = LayoutProcessor.Arrange(bodyLines, layout, frame.Width, frame.Height);
+                var bodyLines = dialogueRegion ? lines : ContinuationMarker.Exclude(lines, fullImage, options, markerDiagnostics is null ? null : ObserveMarker);
+                var arranged = dialogueRegion ? DialogueRegionSelection.Arrange(bodyLines) : LayoutProcessor.Arrange(bodyLines, layout, frame.Width, frame.Height);
                 return new OcrResult(arranged, clock.Elapsed)
                 { RecognitionCache=recognitionCache.Stats, Candidates = lines.ToArray(), MarkerDiagnostics=markerDiagnostics?.ToArray(), MarkerObservations=markerObservations, LearnedMarkerExclusions=learnedExclusions, MarkerBodyChecks=markerBodyChecks, MarkerBodyCacheHits=markerBodyCacheHits, TerminalMarkers=terminalSamples,
                   Models = identity, ModelLoadTime = loadTime, DetectionTime = detectionTime, RecognitionTime = recognitionTime,

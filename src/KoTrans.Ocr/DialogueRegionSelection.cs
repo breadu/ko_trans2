@@ -1,0 +1,81 @@
+using KoTrans.Core;
+
+namespace KoTrans.Ocr;
+
+// Select the paragraph before reading characters. The anchor stays fixed:
+// accepting one neighbouring row must not pull distant labels into the crop.
+internal static class DialogueRegionSelection
+{
+    internal static bool Supported(OcrOptions options) => options.ModelPresetId == "v6-medium-full"
+        && options.Language == "ja" && options.ReadingMode == "ADV" && !options.Vertical
+        && options.SuppressFurigana && !options.KeepLocalParagraph;
+
+    internal static IReadOnlyList<T> Select<T>(IReadOnlyList<T> input, Func<T, PixelRect> bounds)
+    {
+        var rows = Rows(input.Where(item => bounds(item).IsValid).ToArray(), bounds);
+        if (rows.Count == 0) return [];
+        var anchorRow = rows.MaxBy(row => Union(row.Select(bounds)).Width)!;
+        var anchor = Union(anchorRow.Select(bounds));
+        var selected = new List<List<T>> { anchorRow };
+        foreach (var row in rows.OrderBy(row => Math.Abs(Union(row.Select(bounds)).Y - anchor.Y))) {
+            if (ReferenceEquals(row, anchorRow)) continue;
+            var box = Union(row.Select(bounds));
+            if (box.Height < anchor.Height * .65 || box.Height > anchor.Height * 1.5
+                || Math.Abs(box.X - anchor.X) > anchor.Height) continue;
+            if (selected.Any(other => GapY(box, Union(other.Select(bounds))) <= anchor.Height * 1.5))
+                selected.Add(row);
+        }
+        return selected.SelectMany(row => row).OrderBy(item => bounds(item).Y).ThenBy(item => bounds(item).X).ToArray();
+    }
+
+    internal static IReadOnlyList<OcrLine> Arrange(IReadOnlyList<OcrLine> lines)
+        => Rows(lines, line => line.Bounds).OrderBy(row => row.Min(line => line.Bounds.Y))
+            .Select(row => new OcrLine(string.Concat(row.OrderBy(line => line.Bounds.X).Select(line => line.Text)),
+                row.Average(line => line.Confidence), Union(row.Select(line => line.Bounds)))).ToArray();
+
+    // A few pixels protect an edge glyph without widening the vertical band.
+    // Do not cross the midpoint to another piece of the same physical row.
+    internal static PixelRect WithEndMargin(PixelRect box, IReadOnlyList<PixelRect> others, int width)
+    {
+        int margin = Math.Clamp((int)Math.Ceiling(box.Height / 8d), 2, 6);
+        int left = Math.Min(margin, box.X), right = Math.Min(margin, width - box.X - box.Width);
+        foreach (var other in others) {
+            if (other == box || Math.Min(box.Y + box.Height, other.Y + other.Height)
+                - Math.Max(box.Y, other.Y) <= Math.Min(box.Height, other.Height) * .5) continue;
+            if (other.X + other.Width <= box.X) left = Math.Min(left, (box.X - other.X - other.Width) / 2);
+            if (other.X >= box.X + box.Width) right = Math.Min(right, (other.X - box.X - box.Width) / 2);
+        }
+        return box with { X = box.X - left, Width = box.Width + left + right };
+    }
+
+    private static List<List<T>> Rows<T>(IReadOnlyList<T> input, Func<T, PixelRect> bounds)
+    {
+        var rows = new List<List<T>>();
+        foreach (var item in input.OrderBy(item => bounds(item).Y).ThenBy(item => bounds(item).X)) {
+            var box = bounds(item);
+            var matches = rows.Where(row => row.Any(other => SameRow(box, bounds(other)))).ToArray();
+            var merged = new List<T> { item };
+            foreach (var row in matches) { merged.AddRange(row); rows.Remove(row); }
+            rows.Add(merged);
+        }
+        return rows;
+    }
+
+    private static bool SameRow(PixelRect a, PixelRect b)
+    {
+        double height = Math.Max(a.Height, b.Height);
+        return height <= Math.Min(a.Height, b.Height) * 1.6
+            && Math.Abs(a.Y + a.Height / 2d - b.Y - b.Height / 2d) < height * .5
+            && Math.Max(0, Math.Max(a.X - b.X - b.Width, b.X - a.X - a.Width)) <= height;
+    }
+
+    private static double GapY(PixelRect a, PixelRect b)
+        => Math.Max(0, Math.Max(a.Y - b.Y - b.Height, b.Y - a.Y - a.Height));
+
+    private static PixelRect Union(IEnumerable<PixelRect> source)
+    {
+        var boxes = source.ToArray();
+        int x = boxes.Min(box => box.X), y = boxes.Min(box => box.Y);
+        return new(x, y, boxes.Max(box => box.X + box.Width) - x, boxes.Max(box => box.Y + box.Height) - y);
+    }
+}

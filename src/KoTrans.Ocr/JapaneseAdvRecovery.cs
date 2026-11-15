@@ -10,7 +10,8 @@ public sealed class JapaneseAdvRecovery
     private int dialogueTop, lineHeight;
 
     public static bool Supports(OcrOptions options) => options.Language == "ja"
-        && options.ReadingMode == "ADV" && !options.Vertical && options.SearchArea is null;
+        && options.ReadingMode == "ADV" && !options.Vertical && options.SearchArea is null
+        && !DialogueRegionSelection.Supported(options);
 
     internal static bool ReliableBody(OcrLine line) => !line.Vertical && line.Bounds.IsValid
         && line.Confidence >= .8 && line.Bounds.Width >= line.Bounds.Height * 4
