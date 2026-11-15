@@ -4,15 +4,17 @@ using OpenCvSharp;
 namespace KoTrans.Ocr;
 
 // A dim background fold can be decoded as a short letter/number at normal row
-// height. Only reject weak detached candidates when a bright dialogue baseline
-// is established and the candidate has neither matching ink nor strong contrast.
+// height. Reject weak or nested duplicate candidates only when a bright dialogue
+// baseline is established and the patch has neither matching ink nor contrast.
 internal static class DialogueInkFilter
 {
     internal static List<OcrLine> Exclude(Mat image, List<OcrLine> lines, OcrOptions options)
     {
         if (options.Language != "ja" || options.ReadingMode != "ADV" || options.Vertical || options.KeepLocalParagraph)
             return lines;
-        var suspects = lines.Where(l => !l.Vertical && l.Confidence < .8 && l.Text.Length is > 0 and <= 2
+        var suspects = lines.Where(l => !l.Vertical
+            && (l.Confidence < .8 || lines.Any(b => b != l && NestedFragment(l.Bounds, b.Bounds)))
+            && l.Text.Length is > 0 and <= 2
             && l.Text.All(char.IsAsciiLetterOrDigit) && Inside(image, l.Bounds)).ToArray();
         if (suspects.Length == 0) return lines;
         var bodies = lines.Where(l => JapaneseAdvRecovery.ReliableBody(l) && l.Confidence >= .9

@@ -41,6 +41,13 @@ internal static class DialogueInkFilterTests
             "A confident nested fragment protected the larger dim scenery patch");
         Check(LayoutProcessor.Arrange(filtered,options,400,180).Single().Text==body.Text,
             "Nested detector fragments were appended as a false numeric dialogue row");
+        foreach (float confidence in new[] {.79f,.81f,.99f}) {
+            var confident = weakDigit with {Confidence=confidence};
+            var result = DialogueInkFilter.Exclude(image,[body,confident,duplicate],options);
+            Check(!result.Contains(confident) && result.Contains(duplicate)
+                && LayoutProcessor.Arrange(result,options,400,180).Single().Text==body.Text,
+                "Nested background evidence depended on the recognition confidence boundary");
+        }
         var separateSmall = duplicate with {Bounds=new(80,99,16,10)};
         Check(DialogueInkFilter.Exclude(image,[body,weakDigit,separateSmall],options).Contains(weakDigit),
             "An independent small neighbouring glyph lost its row protection");
@@ -56,6 +63,9 @@ internal static class DialogueInkFilterTests
         Check(DialogueInkFilter.Exclude(whiteNumber,input,options).Contains(noise), "A real white numeric row was erased");
         Check(DialogueInkFilter.Exclude(whiteNumber,[body,weakDigit,duplicate],options).Contains(weakDigit),
             "A genuine numeric row with overlapping detections lost its visible glyphs");
+        var strongDigit = weakDigit with {Confidence=.99f};
+        Check(DialogueInkFilter.Exclude(whiteNumber,[body,strongDigit,duplicate],options).Contains(strongDigit),
+            "A confident visible digit with duplicate detections was discarded");
         using var colouredNumber = image.Clone();
         Cv2.PutText(colouredNumber,"7",new(42,102),HersheyFonts.HersheySimplex,.8,new Scalar(20,20,240),2);
         Check(DialogueInkFilter.Exclude(colouredNumber,input,options).Contains(noise), "A real coloured numeric row was erased");
@@ -63,6 +73,8 @@ internal static class DialogueInkFilterTests
         Cv2.Rectangle(darkNumber,new(40,78,30,30),new Scalar(160,160,160),-1);
         Cv2.PutText(darkNumber,"7",new(42,102),HersheyFonts.HersheySimplex,.8,Scalar.Black,2);
         Check(DialogueInkFilter.Exclude(darkNumber,input,options).Contains(noise), "A dark high-contrast numeric row was erased");
+        Check(DialogueInkFilter.Exclude(darkNumber,[body,strongDigit,duplicate],options).Contains(strongDigit),
+            "A high-contrast dark digit with duplicate detections was discarded");
         Console.WriteLine($"Dialogue ink filtering: {count} assertions passed (synthetic pixels).");
     }
 }
