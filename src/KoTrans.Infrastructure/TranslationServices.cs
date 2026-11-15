@@ -201,7 +201,8 @@ public sealed class GeminiTranslationService(HttpClient client, string key) : Ht
         else contents.Add(new { role = "user", parts = new[] { new { text = TranslationPrompt.Input(request) } } });
         var model = request.Options.Model.StartsWith("models/", StringComparison.Ordinal) ? request.Options.Model[7..] : request.Options.Model;
         var body = new Dictionary<string, object> { ["systemInstruction"] = new { parts = new[] { new { text = request.SystemPrompt } } }, ["contents"] = contents };
-        if (request.OutputSchema is not null) body["generationConfig"] = new { responseMimeType = "application/json" };
+        if (request.OutputSchema is not null)
+            body["generationConfig"] = new { responseMimeType = "application/json", responseJsonSchema = request.OutputSchema.Value };
         // Verified text-translation contract only. Do not infer compatibility from model-name substrings.
         // This pins the documented default; Flash-Lite has no supported fully-off thinking setting.
         else if (model == "gemini-3.5-flash-lite") body["generationConfig"] = new { thinkingConfig = new { thinkingLevel = "minimal" } };

@@ -38,47 +38,58 @@ public static class StudyJson
             var root = document.RootElement; Object(root);
             var translation = Text(root, "full_translation", 6000);
             var explanation = Text(root, "sentence_explanation", 8000);
-            if (!root.TryGetProperty("vocabulary", out var array) || array.ValueKind != JsonValueKind.Array || array.GetArrayLength() > 24) throw Invalid();
+            if (!root.TryGetProperty("vocabulary", out var array)) throw Invalid("어휘 목록이 누락되었습니다.");
+            if (array.ValueKind != JsonValueKind.Array) throw Invalid("어휘 목록이 배열 형식이 아닙니다.");
+            if (array.GetArrayLength() > 24) throw Invalid("어휘 항목이 24개를 초과했습니다.");
             var words = new List<VocabularyItem>();
             foreach (var word in array.EnumerateArray())
             {
                 Object(word);
                 var name = Text(word, "word", 200); var ko = Text(word, "meaning_ko", 2000);
                 var source = Text(word, "meaning_src", 2000) ?? Text(word, "meaning_en", 2000);
-                if (string.IsNullOrWhiteSpace(name) || (string.IsNullOrWhiteSpace(ko) && string.IsNullOrWhiteSpace(source))) throw Invalid();
+                if (string.IsNullOrWhiteSpace(name)) throw Invalid("어휘 항목의 단어가 비어 있습니다.");
+                if (string.IsNullOrWhiteSpace(ko) && string.IsNullOrWhiteSpace(source)) throw Invalid("어휘 항목의 뜻이 비어 있습니다.");
                 var examples = new List<StudyExample>();
                 if (word.TryGetProperty("examples", out var examplesJson) && examplesJson.ValueKind != JsonValueKind.Null)
                 {
-                    if (examplesJson.ValueKind != JsonValueKind.Array || examplesJson.GetArrayLength() > 3) throw Invalid();
+                    if (examplesJson.ValueKind != JsonValueKind.Array) throw Invalid("예문 목록이 배열 형식이 아닙니다.");
+                    if (examplesJson.GetArrayLength() > 3) throw Invalid("한 단어의 예문이 3개를 초과했습니다.");
                     foreach (var item in examplesJson.EnumerateArray())
                     {
                         Object(item); var en = Text(item, "en_or_jp", 2000) ?? Text(item, "en", 2000); var kr = Text(item, "ko", 2000);
-                        if (string.IsNullOrWhiteSpace(en) || string.IsNullOrWhiteSpace(kr)) throw Invalid();
+                        if (string.IsNullOrWhiteSpace(en) || string.IsNullOrWhiteSpace(kr)) throw Invalid("예문의 원문 또는 한국어 번역이 비어 있습니다.");
                         examples.Add(new(en, kr));
                     }
                 }
                 words.Add(new(name, Text(word, "pronunciation", 500) ?? "", source ?? "", ko ?? "", examples.AsReadOnly(), Text(word, "tip", 2500) ?? ""));
             }
-            if (words.Count == 0 && string.IsNullOrWhiteSpace(translation) && string.IsNullOrWhiteSpace(explanation)) throw Invalid();
+            if (words.Count == 0 && string.IsNullOrWhiteSpace(translation) && string.IsNullOrWhiteSpace(explanation)) throw Invalid("번역·해설·어휘 내용이 모두 비어 있습니다.");
             return new(translation, explanation, words.AsReadOnly());
         }
-        catch (Exception ex) when (ex is JsonException or InvalidOperationException or ArgumentException) { throw Invalid(); }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or ArgumentException) { throw Invalid("JSON 문법 또는 중첩 구조가 올바르지 않습니다."); }
     }
     private static void Object(JsonElement value)
     {
-        if (value.ValueKind != JsonValueKind.Object) throw Invalid();
+        if (value.ValueKind != JsonValueKind.Object) throw Invalid("해설 항목이 객체 형식이 아닙니다.");
         var names = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var property in value.EnumerateObject()) if (!names.Add(property.Name)) throw Invalid();
+        foreach (var property in value.EnumerateObject()) if (!names.Add(property.Name)) throw Invalid("같은 항목이 중복되어 있습니다.");
     }
     private static string? Text(JsonElement parent, string name, int maximum)
     {
         if (!parent.TryGetProperty(name, out var value) || value.ValueKind == JsonValueKind.Null) return null;
-        if (value.ValueKind != JsonValueKind.String) throw Invalid();
+        if (value.ValueKind != JsonValueKind.String) throw Invalid($"{Label(name)} 항목이 문자열 형식이 아닙니다.");
         var text = value.GetString()!;
-        if (text.Length > maximum || text.Any(c => char.IsControl(c) && c is not ('\n' or '\r' or '\t'))) throw Invalid();
+        if (text.Length > maximum) throw Invalid($"{Label(name)} 항목이 {maximum}자를 초과했습니다.");
+        if (text.Any(c => char.IsControl(c) && c is not ('\n' or '\r' or '\t'))) throw Invalid($"{Label(name)} 항목에 지원하지 않는 제어 문자가 있습니다.");
         return text.Trim();
     }
-    private static TranslationException Invalid() => new("학습 JSON의 필수 데이터·형식·길이가 올바르지 않습니다. 결과를 표시하지 않았습니다.");
+    private static string Label(string name) => name switch {
+        "full_translation" => "전체 번역", "sentence_explanation" => "문장 해설", "word" => "단어",
+        "pronunciation" => "발음", "meaning_ko" => "한국어 뜻", "meaning_src" or "meaning_en" => "원어 뜻",
+        "en_or_jp" or "en" => "예문 원문", "ko" => "예문 번역", "tip" => "활용 팁", _ => "해설"
+    };
+    // Only fixed field labels/limits reach the UI; never include model text or JSON exception details.
+    private static TranslationException Invalid(string reason) => new("AI 해설 형식 오류: " + reason + " 결과를 표시하지 않았습니다.");
 }
 
 public static class ExplanationPrompt
