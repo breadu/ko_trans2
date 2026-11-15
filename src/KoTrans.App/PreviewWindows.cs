@@ -76,7 +76,7 @@ internal sealed partial class TranslationWindow : Window
     }
     internal void SetBusy(bool value)
     {
-        if (value) DismissTriggerPrompt();
+        if (value) DismissInputPrompt();
         busy.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
     }
     internal void SetPipelineResult(PipelineUpdate update)
@@ -84,7 +84,7 @@ internal sealed partial class TranslationWindow : Window
         if (update.Version < pipelineVersion) return;
         // Version changes for each input inside one pipeline. Only BeginSession/stop resets notices.
         if (update.Version > pipelineVersion) pipelineVersion = update.Version;
-        if (update.State is PipelineState.Recognizing or PipelineState.Translating or PipelineState.Error) DismissTriggerPrompt();
+        if (update.State is PipelineState.Recognizing or PipelineState.Translating or PipelineState.Error) DismissInputPrompt();
         if (update.State == PipelineState.Stopped) ClearPipelineNotices();
         else {
             foreach (var area in pipelineErrors.Keys.ToArray())

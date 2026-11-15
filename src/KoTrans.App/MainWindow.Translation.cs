@@ -216,7 +216,7 @@ public partial class MainWindow
     internal async Task RequestInputTriggerAsync()
     {
         if (!automatic || !RecognitionInputPlan.For(Current, true).UseTriggers) return;
-        overlay?.DismissTriggerPrompt();
+        overlay?.DismissInputPrompt();
         var request = ++triggerGeneration; var active = pipeline;
         await Task.Delay(Current.TriggerDelayMs); // Allow the game to draw, without intercepting its input.
         if (!closing && automatic && request == triggerGeneration && active is not null && active == pipeline
@@ -238,7 +238,8 @@ public partial class MainWindow
         string? warning = null;
         var warningArea = PipelineStatusArea.Input;
         FirstRunWizard?.Controller.Bind(active,profileId);
-        overlay?.BeginSession(RecognitionInputPlan.For(Current, watch).UseTriggers);
+        var inputPlan = RecognitionInputPlan.For(Current, watch);
+        overlay?.BeginSession(inputPlan.UseTriggers, inputPlan.WatchClipboard);
         active.ActivityChanged += (version, busy) => Dispatcher.BeginInvoke(() =>
         {
             if (pipeline != active || version != active.Version || Current.Id != profileId || closing) return;
