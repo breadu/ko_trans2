@@ -94,8 +94,10 @@ internal static class JapaneseAdvNoiseTests
         foreach (var outcome in new[] { "body", "empty", "error" }) {
             var fake = new FakeOcr(outcome); var ai = new FakeAi(); var qa = new GameQaRecorder();
             var diagnostics = new DebugTelemetry(); var firstFrame = Frame(); var nextFrame = Frame(true);
+            // Ruby-preserving layouts retain the legacy recovery route. The
+            // three normal horizontal presets now select regions before OCR.
             await using var pipeline = new TranslationPipeline(fake, ai, _ => Task.FromResult(firstFrame),
-                new("ja", "ADV", false), new(), new(), "synthetic", settle: TimeSpan.Zero,
+                new("ja", "ADV", false, SuppressFurigana: false), new(), new(), "synthetic", settle: TimeSpan.Zero,
                 gameQa: qa, qaProfile: GameQaProfile.From(new()), diagnostics: diagnostics);
             pipeline.Start(false);
             await pipeline.RequestManualAsync(image: firstFrame);
@@ -117,6 +119,23 @@ internal static class JapaneseAdvNoiseTests
                 Check(ai.Calls == 1 && qa.Snapshot!.Record.Options.SearchArea is not null
                     && qa.Snapshot.Record.Ocr is null, "Failed recovery sent a known stationary label to AI or recorded success");
             }
+        }
+        foreach (string preset in new[] { "default", "v6-medium-full", "v5-det-v6-medium-rec" }) {
+            var fake = new FakeOcr("error"); var ai = new FakeAi(); var qa = new GameQaRecorder();
+            var diagnostics = new DebugTelemetry(); var firstFrame = Frame();
+            await using var pipeline = new TranslationPipeline(fake, ai, _ => Task.FromResult(firstFrame),
+                new("ja", "ADV", false, ModelPresetId: preset), new(), new(), "synthetic", settle: TimeSpan.Zero,
+                gameQa: qa, qaProfile: GameQaProfile.From(new()), diagnostics: diagnostics);
+            pipeline.Start(false);
+            await pipeline.RequestManualAsync(image: firstFrame);
+            await Until(() => Volatile.Read(ref ai.Calls) == 1);
+            await pipeline.RequestManualAsync(image: Frame(true));
+            await Until(() => Volatile.Read(ref ai.Calls) == 2);
+            Check(fake.Retries == 0 && ai.Last == "ab", "Region-selected text re-entered character/state-based recovery: " + preset);
+            Check(qa.Snapshot!.Record.Options.SearchArea is null && qa.Snapshot.Record.PipelineText == "ab",
+                "QA changed the region-selected OCR output: " + preset);
+            Check(diagnostics.Snapshot().Values.LogicalOcrCalls == 2 && diagnostics.Snapshot().Current!.FullRetries == 0,
+                "Region-selected output triggered another OCR pass: " + preset);
         }
         Console.WriteLine($"Japanese ADV recovery pipeline: {n} assertions passed (synthetic/Mock)");
     }

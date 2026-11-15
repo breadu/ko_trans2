@@ -8,10 +8,15 @@ internal static class DialogueRegionSelectionTests
         int count = 0;
         void Check(bool value, string message) { if (!value) throw new Exception(message); count++; }
         var options = new OcrOptions("ja", "ADV", false, ModelPresetId: "v6-medium-full");
-        Check(DialogueRegionSelection.Supported(options), "Current horizontal Japanese ADV route missing");
-        Check(!JapaneseAdvRecovery.Supports(options), "Old state-based label retry re-entered the region route");
+        string[] presets = ["default", "v6-medium-full", "v5-det-v6-medium-rec"];
+        foreach (string preset in presets) {
+            var supported = options with { ModelPresetId = preset };
+            Check(DialogueRegionSelection.Supported(supported), "Horizontal Japanese ADV route missing: " + preset);
+            Check(DialogueRegionSelection.Supported(supported with { UseDirectMl = true }), "GPU worker uses a different region policy: " + preset);
+            Check(!JapaneseAdvRecovery.Supports(supported), "Old state-based label retry re-entered the region route: " + preset);
+        }
         foreach (var other in new[] { options with { Language = "en" }, options with { ReadingMode = "NVL" },
-            options with { Vertical = true }, options with { ModelPresetId = "default" },
+            options with { Vertical = true }, options with { ModelPresetId = "unknown" }, options with { EngineId = "other" },
             options with { SuppressFurigana = false }, options with { KeepLocalParagraph = true } })
             Check(!DialogueRegionSelection.Supported(other), "Unsupported layout changed");
         PixelRect[] body = [new(40, 30, 500, 30), new(50, 72, 100, 28)];
@@ -33,6 +38,22 @@ internal static class DialogueRegionSelectionTests
         }
         PixelRect[] jittered = [new(120, 50, 200, 40), new(335, 55, 200, 38), new(130, 110, 80, 38)];
         Check(DialogueRegionSelection.Select(jittered, b => b).Count == 3, "Small same-baseline detector jitter split real text");
+        PixelRect[] spaced = [new(100, 50, 180, 40), new(312, 50, 240, 40), new(105, 104, 30, 40)];
+        Check(DialogueRegionSelection.Select(spaced, b => b).SequenceEqual(spaced), "A normal word space discarded the beginning of a sentence");
+        foreach (int scale in new[] { 1, 2, 3 }) {
+            PixelRect Scale(PixelRect b) => new(b.X * scale, b.Y * scale, b.Width * scale, b.Height * scale);
+            PixelRect[] text = [Scale(new(100, 60, 70, 40)), Scale(new(174, 62, 310, 40)), Scale(new(104, 115, 24, 38))];
+            PixelRect[] clutter = [.. text, Scale(new(20, 170, 600, 130)), Scale(new(30, 70, 40, 30))];
+            Check(DialogueRegionSelection.Select(clutter, b => b).SequenceEqual(text), "Large patch or detached prefix displaced dialogue");
+            Check(DialogueRegionSelection.Select(clutter.Reverse().ToArray(), b => b).SequenceEqual(text), "Paragraph selection depends on detector order/scale");
+            PixelRect[] separate = [Scale(new(100, 20, 500, 40)), Scale(new(106, 72, 210, 40))];
+            var between = separate.Append(Scale(new(65, 50, 50, 28))).ToArray();
+            Check(DialogueRegionSelection.Select(between, b => b).SequenceEqual(separate), "Overlapping side fragment became a third dialogue line");
+            PixelRect[] wrapped = [Scale(new(100, 50, 600, 40)), Scale(new(110, 110, 150, 38))];
+            var prefixed = wrapped.Append(Scale(new(20, 55, 60, 35))).ToArray();
+            Check(DialogueRegionSelection.Select(prefixed, b => b).SequenceEqual(wrapped), "Aligned continuation lost to a distant leading fragment");
+            Check(DialogueRegionSelection.Select(prefixed.Reverse().ToArray(), b => b).SequenceEqual(wrapped), "Shared paragraph start depends on detector order");
+        }
         PixelRect[] shortFirst = [new(40, 25, 40, 30), new(45, 65, 400, 30)];
         Check(DialogueRegionSelection.Select(shortFirst, b => b).SequenceEqual(shortFirst), "Short first row lost when second row is widest");
         PixelRect[] fragments = [new(170, 30, 75, 28), new(40, 32, 65, 28), new(110, 31, 55, 28), new(300, 100, 160, 28)];
@@ -45,9 +66,11 @@ internal static class DialogueRegionSelectionTests
         Check(lines.Count == 2 && lines[0].Text == "C7ABC" && lines[1].Text == "！", "Valid Latin/digits/short text were filtered");
         var frame = new ImageFrame(600, 150, 2400, new byte[360000]);
         var crop = new PixelRect(20, 10, 500, 120);
-        var restored = OcrRegionTracker.Restore(new(lines, TimeSpan.Zero) { Candidates = lines }, crop, frame, options);
-        Check(restored.Text == "C7ABC\n！" && restored.Lines[0].Bounds.X == 60 && restored.Lines[0].Bounds.Y == 40,
-            "ROI restoration changed selected text or coordinates");
+        foreach (string preset in presets) {
+            var restored = OcrRegionTracker.Restore(new(lines, TimeSpan.Zero) { Candidates = lines }, crop, frame, options with { ModelPresetId = preset });
+            Check(restored.Text == "C7ABC\n！" && restored.Lines[0].Bounds.X == 60 && restored.Lines[0].Bounds.Y == 40,
+                "ROI restoration changed selected text or coordinates: " + preset);
+        }
         Console.WriteLine($"Dialogue region selection: {count} passed");
     }
 }

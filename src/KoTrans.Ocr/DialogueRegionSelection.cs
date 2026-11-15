@@ -6,7 +6,8 @@ namespace KoTrans.Ocr;
 // accepting one neighbouring row must not pull distant labels into the crop.
 internal static class DialogueRegionSelection
 {
-    internal static bool Supported(OcrOptions options) => options.ModelPresetId == "v6-medium-full"
+    internal static bool Supported(OcrOptions options) => options.EngineId == "paddle"
+        && options.ModelPresetId is ("default" or "v6-medium-full" or "v5-det-v6-medium-rec")
         && options.Language == "ja" && options.ReadingMode == "ADV" && !options.Vertical
         && options.SuppressFurigana && !options.KeepLocalParagraph;
 
@@ -14,14 +15,30 @@ internal static class DialogueRegionSelection
     {
         var rows = Rows(input.Where(item => bounds(item).IsValid).ToArray(), bounds);
         if (rows.Count == 0) return [];
-        var anchorRow = rows.MaxBy(row => Union(row.Select(bounds)).Width)!;
+        // Compare line length in units of character height. A large background
+        // patch must not win merely because it occupies more screen pixels.
+        var anchorRow = rows.MaxBy(row => { var box = Union(row.Select(bounds)); return (double)box.Width / box.Height; })!;
         var anchor = Union(anchorRow.Select(bounds));
+        // Wrapped rows also establish the paragraph's start. A detached piece
+        // to their left must not shift that start and discard the continuation.
+        var neighbours = rows.Where(row => !ReferenceEquals(row, anchorRow)).Select(row => Union(row.Select(bounds)))
+            .Where(box => box.Height >= anchor.Height * .65 && box.Height <= anchor.Height * 1.5
+                && SeparateRows(box, anchor) && GapY(box, anchor) <= anchor.Height * 1.5).ToArray();
+        int alignedStart = anchorRow.Select(bounds).Where(box => neighbours.Any(other => Math.Abs(box.X - other.X) <= anchor.Height))
+            .Select(box => box.X).DefaultIfEmpty(anchor.X).Min();
+        if (alignedStart - anchor.X > anchor.Height) {
+            var aligned = anchorRow.Where(item => bounds(item).X >= alignedStart - anchor.Height).ToList();
+            rows[rows.IndexOf(anchorRow)] = aligned; anchorRow = aligned; anchor = Union(aligned.Select(bounds));
+        }
         var selected = new List<List<T>> { anchorRow };
         foreach (var row in rows.OrderBy(row => Math.Abs(Union(row.Select(bounds)).Y - anchor.Y))) {
             if (ReferenceEquals(row, anchorRow)) continue;
             var box = Union(row.Select(bounds));
             if (box.Height < anchor.Height * .65 || box.Height > anchor.Height * 1.5
                 || Math.Abs(box.X - anchor.X) > anchor.Height) continue;
+            // A continuation needs its own baseline, not a side fragment
+            // overlapping the space between two already selected lines.
+            if (selected.Any(other => !SeparateRows(box, Union(other.Select(bounds))))) continue;
             if (selected.Any(other => GapY(box, Union(other.Select(bounds))) <= anchor.Height * 1.5))
                 selected.Add(row);
         }
@@ -68,9 +85,12 @@ internal static class DialogueRegionSelection
             // Partial vertical overlap is not a shared text baseline. Otherwise
             // a displaced side label moves the row's left edge and makes the
             // following, correctly aligned dialogue row look unrelated.
-            && Math.Abs(a.Y + a.Height / 2d - b.Y - b.Height / 2d) < height * .25
+            && Math.Abs(a.Y + a.Height / 2d - b.Y - b.Height / 2d) < height * .125
             && Math.Max(0, Math.Max(a.X - b.X - b.Width, b.X - a.X - a.Width)) <= height;
     }
+
+    private static bool SeparateRows(PixelRect a, PixelRect b)
+        => Math.Abs(a.Y + a.Height / 2d - b.Y - b.Height / 2d) >= Math.Max(a.Height, b.Height) * .75;
 
     private static double GapY(PixelRect a, PixelRect b)
         => Math.Max(0, Math.Max(a.Y - b.Y - b.Height, b.Y - a.Y - a.Height));
