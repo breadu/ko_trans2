@@ -218,6 +218,9 @@ internal static class LocalTranslationTests
             catch (LocalTranslationLimitException ex) { Check(ex.Limit == expected, "Worker limit kind was lost"); }
         }
         Check((await runtime.TranslateAsync("after-limits", default)).Text == first.Text, "Budget recovery reloaded the model");
+        try { await runtime.TranslateAsync("INFERENCE_ERROR", default); throw new Exception("Worker inference failure was accepted"); }
+        catch (TranslationException ex) { Check(ex is not LocalTranslationLimitException && !ex.Message.Contains("길이") && ex.Message.Contains("다시 시작"),
+            "Generic worker failure was misreported as an input length limit"); }
         using var cts = new CancellationTokenSource(); var pending = runtime.TranslateAsync("SLOW", cts.Token);
         await slow.Task.WaitAsync(TimeSpan.FromSeconds(5)); cts.Cancel();
         await Reject<OperationCanceledException>(() => pending);

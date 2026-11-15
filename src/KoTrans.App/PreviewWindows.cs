@@ -140,9 +140,7 @@ internal sealed partial class TranslationWindow : Window
         original.WordRequested += word => _ = OpenDictionaryAsync(word);
         original.AnalysisFailed += message => {
             if (pipelineErrors.Count == 0 && pipelineWarning is null)
-                SetResult(null, null, message.StartsWith("한자 읽기", StringComparison.Ordinal)
-                    ? "한자 읽기를 표시하지 못했습니다. 원문은 계속 사용할 수 있습니다."
-                    : "단어 정보를 불러오지 못했습니다. 사전 설정을 확인하세요.");
+                SetResult(null, null, message);
             InteractionFailed?.Invoke(message);
         };
         Title = "KO Trans 2 · 번역"; MinWidth = 320; MinHeight = 150; Topmost = true; ShowActivated = false; ShowInTaskbar = false;
@@ -250,13 +248,13 @@ internal sealed partial class TranslationWindow : Window
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception ex) {
             if (!closed && !token.IsCancellationRequested) {
-                var message = "단어 사전을 열지 못했습니다. " + ex.Message;
+                var message = ex switch {
+                    DictionaryBrowserException or System.IO.InvalidDataException => ex.Message,
+                    UnauthorizedAccessException => "사전 페이지를 열지 못했습니다. 사전 전용 폴더에 접근할 권한을 확인하세요.",
+                    _ => "사전 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요."
+                };
                 if (pipelineErrors.Count == 0 && pipelineWarning is null)
-                    SetResult(null, null, ex is System.IO.FileNotFoundException
-                        ? "사전 기능을 사용하려면 Edge 또는 Chrome을 설치하세요."
-                        : ex is System.IO.IOException && ex.Message.Contains("시간이 초과", StringComparison.Ordinal)
-                            ? "사전 페이지를 열지 못했습니다. 잠시 후 다시 시도하세요."
-                            : "사전 페이지를 열지 못했습니다. 브라우저 설정을 확인하세요.");
+                    SetResult(null, null, message);
                 InteractionFailed?.Invoke(message);
             }
         }

@@ -64,7 +64,7 @@ internal static class StatusLifecycleTests
                 Check(model.Status == (translated ? "OCR 모델 변경 · 설정 저장 후 번역을 시작하세요." : "OCR 모델 변경 · 설정 저장 후 원문 인식을 시작하세요.")
                     && main.FeedbackToast.Detail.Contains("저장 필요"), "Model change lost mode or unsaved notice");
                 Check(MainWindow.StartFailureMessage(new Exception("private internal detail"), translated) == (translated
-                    ? "번역 준비 실패 · 모델과 설정을 확인하세요." : "원문 인식 준비 실패 · OCR 모델과 캡처 설정을 확인하세요."), "Generic startup failure has wrong mode");
+                    ? "번역 준비 중 오류가 발생했습니다. 다시 시작해 주세요." : "원문 인식 준비 중 오류가 발생했습니다. 다시 시작해 주세요."), "Generic startup failure has wrong mode");
                 Check(MainWindow.StartFailureMessage(new CaptureUnavailableException("대상 창 확인 필요"), translated) == "대상 창 확인 필요", "Specific startup cause was hidden");
             }
             main.ShowCompletionStatus("이전 프로필 완료");

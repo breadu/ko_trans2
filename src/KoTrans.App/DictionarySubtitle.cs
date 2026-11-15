@@ -91,9 +91,15 @@ internal sealed partial class DictionarySubtitle : TextBlock
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception ex) {
             if (!disposed && version == revision && !token.IsCancellationRequested)
-                AnalysisFailed?.Invoke("단어 사전을 준비하지 못했습니다. 일본어 IPA 사전 파일과 원문을 확인하세요. " + ex.Message);
+                AnalysisFailed?.Invoke(AnalysisFailureMessage("단어 정보를 표시하지 못했습니다.", ex));
         }
     }
+    private static string AnalysisFailureMessage(string operation, Exception error) => operation + " " + (error switch {
+        KoTrans.Core.TranslationException or InvalidDataException => error.Message,
+        FileNotFoundException or DirectoryNotFoundException => "단어 분석에 필요한 파일을 찾을 수 없습니다. 프로그램의 사전 파일을 확인하세요.",
+        UnauthorizedAccessException => "단어 분석 파일에 접근할 권한을 확인하세요.",
+        _ => "원문은 계속 사용할 수 있습니다. 기능을 껐다 켜거나 다시 시작해 주세요."
+    });
     internal void Hover(int position)
     {
         var target = LookupEnabled ? runs.Select(r => r.Word).FirstOrDefault(w => position >= w.Start && position < w.Start + w.Length) : null;

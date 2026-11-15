@@ -199,7 +199,7 @@ internal static class OverlayActivityTests
             Complete(pipeline.RequestManualAsync(true)); Until(() => engine.Calls == 3, "Retry OCR did not start");
             engine.Results[2].SetResult(Result("second complete source")); Until(() => ai.Calls == 2, "Retry AI did not start");
             ai.Results[1].SetException(new TranslationException("모의 서버 오류 · 다시 시도하세요."));
-            Until(() => !Busy() && notice.Text.Contains("AI 서비스 요청에 실패"), "AI failure left busy latched or hid the error");
+            Until(() => !Busy() && notice.Text == "모의 서버 오류 · 다시 시도하세요.", "AI failure left busy latched or hid the error");
             Check(notice.Visibility == Visibility.Visible && Text(overlay).Contains("first translation"), "Failure erased the previous translation");
             Complete(pipeline.RequestManualAsync(true)); Until(() => engine.Calls == 4 && Busy(), "OCR restart missing");
             Click(toggle);
@@ -239,11 +239,11 @@ internal static class OverlayActivityTests
             Complete(pipeline.RequestManualAsync()); Until(() => engine.Calls == 2 && busy.Visibility == Visibility.Visible, "Faulting OCR never started");
             engine.Results[1].SetException(new InvalidDataException("synthetic OCR failure"));
             Until(() => busy.Visibility == Visibility.Collapsed && notice.Visibility == Visibility.Visible, "OCR failure hid its error or left activity stuck");
-            Check(ai.Calls == 0 && notice.Text.Contains("문자 인식에 실패"), "OCR failure was treated as a normal completion: " + notice.Text);
+            Check(ai.Calls == 0 && notice.Text.Contains("문자 인식 중 오류"), "OCR failure was treated as a normal completion: " + notice.Text);
             pipeline.SubmitClipboard("synthetic clipboard request", manual: true);
             Until(() => ai.Calls == 1 && busy.Visibility == Visibility.Visible, "Clipboard request has no busy indicator");
             pipeline.SubmitClipboard("", manual: true);
-            Until(() => busy.Visibility == Visibility.Collapsed && notice.Text.Contains("문자 인식에 실패"),
+            Until(() => busy.Visibility == Visibility.Collapsed && notice.Text.Contains("문자 인식 중 오류"),
                 "Empty clipboard supersession replaced an unresolved OCR error or left busy stale");
             ai.Results[0].SetResult(new("late clipboard response", TimeSpan.Zero));
             Complete(pipeline.DisposeAsync().AsTask()); Pump();

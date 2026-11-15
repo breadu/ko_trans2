@@ -17,7 +17,7 @@ public partial class MainWindow
         if (!settings.Profiles.Contains(owner)) return;
         owner.DictionaryPopupWindow = placement;
         if (!await SaveSettings(errorPrefix: "단어 사전 위치 저장 실패: "))
-            throw new IOException("사전 위치를 저장하지 못했습니다. 설정의 저장 상태를 확인하세요.");
+            throw new DictionaryBrowserException("사전 위치를 저장하지 못했습니다. 설정의 저장 상태를 확인하세요.");
     }
     private async Task<bool> FlushDictionaryPopupAsync(DictionaryPopupTracker? tracker)
     {

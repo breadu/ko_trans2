@@ -11,58 +11,47 @@ internal static class ProviderRoutingTests
     internal static async Task Run()
     {
         string dir=Path.Combine(Path.GetTempPath(),"KoTrans2.ProviderRouting",Guid.NewGuid().ToString("N"));Directory.CreateDirectory(dir);
-        try {await Routes(dir);await OcrFailures(dir);OverlayMessages();await OllamaOverlayErrors();}finally{Directory.Delete(dir,true);}
+        try {await Routes(dir);await OcrFailures(dir);OverlayMessages();await OllamaOverlayErrors();await PipelineFailureCauses();}finally{Directory.Delete(dir,true);}
         Console.WriteLine($"PASS: {count} provider vault/factory/request + OCR-before-API assertions. Synthetic credentials and Mock HTTP only.");
     }
     private static void OverlayMessages()
     {
-        static string Show(TranslationProvider provider, string detail) => TranslationPipeline.TranslationOverlayMessage(provider, new TranslationException(detail));
-        Check(Show(TranslationProvider.Ollama, "Ollama 서버 오류 (HTTP 500). 원인 불명").Contains("서버 상태"),
-            "Unknown Ollama 500 was classified as a specific hardware failure");
-        Check(Show(TranslationProvider.Ollama, "Ollama가 메모리 부족 오류를 반환했습니다.").Contains("메모리가 부족"),
-            "Explicit Ollama memory response lost its actionable notice");
-        Check(Show(TranslationProvider.Ollama, "Ollama 120초 제한 초과 · 모델 실행 응답 대기 중").Contains("제한 시간"),
-            "Ollama timeout lost its model-specific notice");
-        Check(Show(TranslationProvider.DeepL, "DeepL API 번역 문자 사용 한도를 초과했습니다.").Contains("사용량 한도"),
-            "DeepL quota notice was not provider-specific");
-        Check(Show(TranslationProvider.Gemini, "Gemini 응답이 중단되었습니다.").Contains("Gemini 번역이 중단"),
-            "Gemini interruption lost its short notice");
-        const string localMemory = "로컬 번역에 필요한 메모리가 부족합니다.";
-        const string localGeneric = "로컬 번역에 실패했습니다. 모델 상태를 확인하고 다시 시도하세요.";
-        Check(Show(TranslationProvider.HyMtLocal,
-                "이 PC에서 로컬 번역을 준비하지 못했습니다. 메모리와 그래픽 드라이버 상태를 확인한 뒤 다시 시도해 주세요.") == localGeneric,
-            "Generic local startup failure was incorrectly classified as confirmed low memory");
-        Check(Show(TranslationProvider.HyMtLocal,
-                "로컬 모델 실행 실패 · 메모리 부족 가능성이 있지만 원인은 불명확합니다.") == localGeneric,
-            "A possible low-memory cause was incorrectly presented as confirmed");
-        Check(Show(TranslationProvider.HyMtLocal,
-                "Hy-MT2 7B의 CPU 실행에는 가용 RAM 12GiB 이상이 필요합니다. 다른 프로그램의 메모리 사용량을 확인해 주세요.") == localMemory,
-            "Explicit CPU RAM requirement was not recognized as insufficient memory");
-        Check(Show(TranslationProvider.HyMtLocal, "GPU 메모리가 부족합니다.") == localMemory,
-            "Explicit memory shortage lost its actionable notice");
-        Check(TranslationPipeline.TranslationOverlayMessage(TranslationProvider.HyMtLocal,
-                new OutOfMemoryException("native allocation failed")) == localMemory,
-            "OutOfMemoryException was not classified as low memory");
-        Check(Show(TranslationProvider.OpenAI, "GPU 메모리가 부족합니다.") != localMemory,
-            "Local-memory classification leaked into other providers");
-        Check(Show(TranslationProvider.HyMtLocal, "로컬 번역이 출력 한도에 도달했습니다.").Contains("대사 영역"),
-            "Local output limit lost its actionable notice");
-        foreach (var provider in new[] { TranslationProvider.OpenAI, TranslationProvider.Gemini, TranslationProvider.DeepL })
-            Check(!Show(provider, "Ollama 서버 주소 또는 모델을 찾을 수 없습니다.").Contains("Ollama"),
-                "Ollama classification escaped its provider: " + provider);
+        string[] details = [
+            "캐릭터 사전 파일을 읽을 수 없습니다. 파일 위치를 확인하세요.",
+            "로컬 번역 시간이 초과되었습니다. 원문 영역을 줄인 뒤 다시 시도해 주세요.",
+            "로컬 번역이 출력 한도에 도달했습니다.",
+            "이 PC에서 로컬 번역을 준비하지 못했습니다. 메모리와 그래픽 드라이버 상태를 확인한 뒤 다시 시도해 주세요.",
+            "Hy-MT2 7B의 CPU 실행에는 가용 RAM 6GiB 이상이 필요합니다.",
+            "DeepL API 번역 문자 사용 한도를 초과했습니다.",
+            "Gemini 응답이 중단되었습니다.",
+            "Ollama 서버 오류 (HTTP 500). 원인 불명",
+            "Ollama 120초 제한 초과 · 모델 실행 응답 대기 중"
+        ];
+        foreach (var provider in Enum.GetValues<TranslationProvider>()) {
+            foreach (string detail in details)
+                Check(TranslationPipeline.TranslationOverlayMessage(provider, new TranslationException(detail)) == detail,
+                    "Selected provider replaced a known cause: " + provider);
+            foreach (var raw in new Exception[] { new IOException("private/path/model.onnx"), new Exception("private-token; 메모리가 부족합니다."),
+                new UnauthorizedAccessException("private/key"), new FileNotFoundException("private/model.onnx") }) {
+                string notice = TranslationPipeline.TranslationOverlayMessage(provider, raw);
+                Check(!notice.Contains("private") && !notice.Contains("서버") && !notice.Contains("메모리") && !notice.Contains("모델"),
+                    "Unclassified error leaked details or guessed a cause: " + provider);
+            }
+        }
+        Check(TranslationPipeline.TranslationOverlayMessage(TranslationProvider.HyMtLocal, new OutOfMemoryException())
+            == "로컬 번역에 필요한 메모리가 부족합니다.", "Confirmed out-of-memory cause was lost");
     }
     private static async Task OllamaOverlayErrors()
     {
-        const string generic = "Ollama 서버에서 오류가 발생했습니다. 서버 상태를 확인하세요.";
-        var cases = new (HttpStatusCode Code, string Error, Exception? Failure, string Detail, string Notice)[] {
-            (HttpStatusCode.NotFound, "not found", null, "Ollama 서버 주소 또는 모델을 찾을 수 없습니다.", "Ollama 서버 주소나 설치된 모델을 확인하세요."),
-            (HttpStatusCode.BadRequest, "bad request", null, "Ollama가 요청 형식을 거부했습니다.", "Ollama가 요청을 처리하지 못했습니다. 모델의 요청 형식을 확인하세요."),
-            (HttpStatusCode.InternalServerError, "out of memory", null, "Ollama가 메모리 부족 오류를 반환했습니다.", "Ollama의 메모리가 부족합니다. 작은 모델을 선택하거나 다른 프로그램을 종료하세요."),
-            (HttpStatusCode.InternalServerError, "model runner stopped", null, "Ollama 모델 실행기의 응답을 받지 못했습니다.", "Ollama 모델이 응답하지 않았습니다. 번역을 중지한 뒤 다시 시작하세요."),
-            (HttpStatusCode.InternalServerError, "127.0.0.1 connection reset", null, "Ollama 서버와 모델 실행기 사이의 연결", "Ollama 내부 연결이 끊겼습니다. 번역을 중지한 뒤 다시 시작하세요."),
-            (HttpStatusCode.InternalServerError, "unknown failure", null, "Ollama 서버 오류 (HTTP 500).", generic),
-            (HttpStatusCode.OK, "", new TaskCanceledException(), "Ollama 120초 제한 초과", "Ollama 번역 시간이 초과되었습니다. 모델 실행 상태와 제한 시간을 확인하세요."),
-            (HttpStatusCode.OK, "", new HttpRequestException(), "Ollama 서버에 연결하지 못", "Ollama에 연결하지 못했습니다. 서버 실행 상태를 확인하세요.")
+        var cases = new (HttpStatusCode Code, string Error, Exception? Failure, string Detail)[] {
+            (HttpStatusCode.NotFound, "not found", null, "Ollama 서버 주소 또는 모델을 찾을 수 없습니다."),
+            (HttpStatusCode.BadRequest, "bad request", null, "Ollama가 요청 형식을 거부했습니다."),
+            (HttpStatusCode.InternalServerError, "out of memory", null, "Ollama가 메모리 부족 오류를 반환했습니다."),
+            (HttpStatusCode.InternalServerError, "model runner stopped", null, "Ollama 모델 실행기의 응답을 받지 못했습니다."),
+            (HttpStatusCode.InternalServerError, "127.0.0.1 connection reset", null, "Ollama 서버와 모델 실행기 사이의 연결"),
+            (HttpStatusCode.InternalServerError, "unknown failure", null, "Ollama 서버 오류 (HTTP 500)."),
+            (HttpStatusCode.OK, "", new TaskCanceledException(), "Ollama 120초 제한 초과"),
+            (HttpStatusCode.OK, "", new HttpRequestException(), "Ollama 서버에 연결하지 못")
         };
         foreach (var item in cases) {
             using var handler = new ErrorHandler(item.Code, item.Error, item.Failure);
@@ -74,7 +63,7 @@ internal static class ProviderRoutingTests
             catch (TranslationException ex) { failure = ex; }
             Check(failure is not null && failure.Message.StartsWith(item.Detail, StringComparison.Ordinal), "Adapter detail changed: " + item.Detail);
             string detail = failure!.Message;
-            Check(TranslationPipeline.TranslationOverlayMessage(TranslationProvider.Ollama, failure) == item.Notice,
+            Check(TranslationPipeline.TranslationOverlayMessage(TranslationProvider.Ollama, failure) == detail,
                 "Ollama overlay lost the adapter classification: " + item.Detail);
             Check(failure.Message == detail && handler.Calls == 1 && service.HttpAttempts == 1,
                 "Overlay classification modified detailed diagnostics or repeated a request");
@@ -136,12 +125,52 @@ internal static class ProviderRoutingTests
             var result=await error.Task.WaitAsync(TimeSpan.FromSeconds(3));
             Check(result.Message.Contains("OCR 모델")&&result.Message.Contains("번역 API로 전송되지")&&!result.Message.Contains(dir),"Missing model failed opaquely or leaked path: "+provider);
             Check(ai.Calls==0 && result.TranslationRequests==0 && result.HttpAttempts==0,"Missing OCR reached translation API: "+provider);
-            Check(result.FailureArea == PipelineStatusArea.Ocr && result.OverlayMessage == "OCR 모델 파일을 찾을 수 없습니다. 모델 파일을 확인하세요.",
+            Check(result.FailureArea == PipelineStatusArea.Ocr && result.OverlayMessage == result.Message,
                 "OCR initialization error lost its separate short overlay notice: " + provider);
         }
     }
     private sealed class NeverCalled:ITranslationService
     {public int Calls;public Task<TranslationResult> TranslateAsync(TranslationRequest request,CancellationToken token){Calls++;throw new Exception("Unexpected AI request");}}
+    private static async Task PipelineFailureCauses()
+    {
+        var cases = new (PipelineStatusArea Area, Exception Error, bool Known)[] {
+            (PipelineStatusArea.Ocr, new OcrInitializationException("선택한 OCR 모델은 세로쓰기를 지원하지 않습니다."), true),
+            (PipelineStatusArea.Ocr, new OcrInitializationException("OCR 부동소수점 실행 상태를 복구할 수 없습니다."), true),
+            (PipelineStatusArea.Ocr, new FileNotFoundException("private/non-model-file"), false),
+            (PipelineStatusArea.Ocr, new UnauthorizedAccessException("private/non-model-folder"), false),
+            (PipelineStatusArea.Capture, new CaptureUnavailableException("대상 창이 종료되었습니다. 창을 다시 선택하세요."), true),
+            (PipelineStatusArea.Capture, new IOException("private/capture-code"), false),
+            (PipelineStatusArea.Translation, new TranslationException("캐릭터 사전의 같은 이름에는 하나의 한국어 표기를 지정해 주세요."), true),
+            (PipelineStatusArea.Translation, new TranslationException("로컬 번역 시간이 초과되었습니다. 다시 시도해 주세요."), true),
+            (PipelineStatusArea.Translation, new IOException("private/worker-pipe"), false)
+        };
+        var frame = new ImageFrame(120, 50, 480, new byte[24000]);
+        foreach (var item in cases) {
+            var failure = new TaskCompletionSource<PipelineUpdate>(TaskCreationOptions.RunContinuationsAsynchronously);
+            await using var pipeline = new TranslationPipeline(new FaultOcr(item.Area == PipelineStatusArea.Ocr ? item.Error : null),
+                new FaultAi(item.Error), _ => item.Area == PipelineStatusArea.Capture ? Task.FromException<ImageFrame>(item.Error) : Task.FromResult(frame),
+                new("en", "ADV", false), new() { Provider = TranslationProvider.HyMtLocal }, new(), "", settle: TimeSpan.Zero);
+            pipeline.Updated += update => { if (update.State == PipelineState.Error) failure.TrySetResult(update); };
+            pipeline.Start(false); await pipeline.RequestManualAsync();
+            var result = await failure.Task.WaitAsync(TimeSpan.FromSeconds(4));
+            Check(result.FailureArea == item.Area && result.OverlayMessage == result.Message, "Subtitle changed the responsible stage or cause");
+            Check(item.Known ? result.OverlayMessage == item.Error.Message
+                : !result.OverlayMessage!.Contains("private") && !result.OverlayMessage.Contains("모델 파일") && !result.OverlayMessage.Contains("서버"),
+                "Pipeline guessed the cause or hid known guidance");
+        }
+    }
+    private sealed class FaultOcr(Exception? error) : IOcrService
+    {
+        public OcrState State => OcrState.Ready;
+        public Task InitializeAsync(OcrOptions options, CancellationToken token) => error is null ? Task.CompletedTask : Task.FromException(error);
+        public Task<OcrResult> RecognizeAsync(ImageFrame frame, OcrOptions options, CancellationToken token) =>
+            error is null ? Task.FromResult(new OcrResult([new("synthetic text", 1, new(10, 10, 90, 25))], TimeSpan.Zero)) : Task.FromException<OcrResult>(error);
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+    private sealed class FaultAi(Exception error) : ITranslationService
+    {
+        public Task<TranslationResult> TranslateAsync(TranslationRequest request, CancellationToken token) => Task.FromException<TranslationResult>(error);
+    }
     private sealed class Handler:HttpMessageHandler
     {
         public int Calls;public string Body="",Url="",Auth="";

@@ -98,7 +98,7 @@ internal sealed partial class DictionarySubtitle
         catch (Exception ex) when (ex is not OutOfMemoryException) {
             if (!disposed && request == rubyRevision && !token.IsCancellationRequested) {
                 rubyAttempted = false;
-                AnalysisFailed?.Invoke("한자 읽기를 표시하지 못했습니다. 원문과 단어 사전은 계속 사용할 수 있습니다. " + ex.Message);
+                AnalysisFailed?.Invoke(AnalysisFailureMessage("한자 읽기를 표시하지 못했습니다.", ex));
             }
         }
     }

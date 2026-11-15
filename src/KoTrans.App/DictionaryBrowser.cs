@@ -6,6 +6,8 @@ using Microsoft.Win32;
 
 namespace KoTrans.App;
 
+internal sealed class DictionaryBrowserException(string message) : IOException(message);
+
 public static partial class DictionaryBrowser
 {
     public static string FindExecutable()
@@ -23,7 +25,7 @@ public static partial class DictionaryBrowser
                 var path = Path.Combine(root, browser.Item2); if (File.Exists(path)) return path;
             }
         }
-        throw new FileNotFoundException("사전 팝업에는 Microsoft Edge 또는 Google Chrome이 필요합니다. 브라우저를 설치한 뒤 다시 시도해 주세요.");
+        throw new DictionaryBrowserException("사전 팝업에는 Microsoft Edge 또는 Google Chrome이 필요합니다. 브라우저를 설치한 뒤 다시 시도해 주세요.");
     }
     public static string StartPage(string profile) => new Uri(Path.Combine(profile, "dictionary-start.html")).AbsoluteUri;
     private static readonly SemaphoreSlim LookupGate = new(1, 1);
@@ -78,7 +80,7 @@ public static partial class DictionaryBrowser
             if (target == null)
             {
                 using var process = Process.Start(launch);
-                if (process == null) throw new IOException("사전 브라우저를 시작하지 못했습니다.");
+                if (process == null) throw new DictionaryBrowserException("사전 브라우저를 시작하지 못했습니다.");
                 while (target == null)
                 {
                     await Task.Delay(150, startup.Token);
@@ -98,7 +100,7 @@ public static partial class DictionaryBrowser
             IntPtr popup;
             for (int attempt = 0; !DictionaryPopupPlacement.Present(processId, bounds, out popup); attempt++)
             {
-                if (attempt >= 20) throw new IOException("사전 브라우저 창을 찾지 못했습니다. 창을 닫은 뒤 다시 시도해 주세요.");
+                if (attempt >= 20) throw new DictionaryBrowserException("사전 브라우저 창을 찾지 못했습니다. 창을 닫은 뒤 다시 시도해 주세요.");
                 await Task.Delay(100, ct);
             }
             tracker?.Attach(popup, restored.Temporary);
@@ -106,10 +108,10 @@ public static partial class DictionaryBrowser
             var session = attached.GetProperty("sessionId").GetString()!;
             var result = await browser.SendAsync("Page.navigate", new { url = uri.AbsoluteUri }, ct, session);
             if (result.TryGetProperty("errorText", out var error) && error.GetString() is { Length: > 0 } message)
-                throw new IOException("사전 페이지를 열지 못했습니다: " + message);
+                throw new DictionaryBrowserException("사전 페이지로 이동하지 못했습니다. 사전 주소와 연결 상태를 확인하세요.");
         }
         catch (OperationCanceledException) when (!token.IsCancellationRequested)
-        { throw new IOException("사전 브라우저 응답을 기다리다 시간이 초과되었습니다. 잠시 후 단어를 다시 클릭해 주세요."); }
+        { throw new DictionaryBrowserException("사전 브라우저 응답을 기다리다 시간이 초과되었습니다. 잠시 후 단어를 다시 클릭해 주세요."); }
         finally { connection?.Dispose(); LookupGate.Release(); }
     }
     private static async Task<string?> FindTargetAsync(DictionaryConnection connection, string savedTarget, string startPage, CancellationToken token)

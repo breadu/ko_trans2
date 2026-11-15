@@ -40,7 +40,7 @@ internal static class CapturePauseTests
                 Check(ocr.Calls == calls && ai.Calls == 1 && snap.Current!.Id == cycle, "Waiting performed OCR/AI or created a cycle");
                 string expectedNotice = (CaptureWaitReason)reason switch {
                     CaptureWaitReason.NotForeground => "게임 창을 앞으로 가져오세요. 활성화되면 인식을 재개합니다.",
-                    CaptureWaitReason.HiddenOrMinimized => "게임 창이 최소화되어 있습니다. 창을 복원하세요.",
+                    CaptureWaitReason.HiddenOrMinimized => "게임 창이 최소화되었거나 숨겨져 있습니다. 창을 다시 표시하세요.",
                     _ => "KO Trans 2 창이 게임 화면을 가리고 있습니다. 창을 옮기거나 최소화하세요."
                 };
                 Check(updates.Any(u => u.FailureArea == PipelineStatusArea.Capture && u.Important
@@ -55,7 +55,7 @@ internal static class CapturePauseTests
             Volatile.Write(ref state, 4);
             await Until(() => updates.Any(u => u.State == PipelineState.Error));
             Check(updates.Any(u => u.State == PipelineState.Error && u.Message == "Synthetic actual failure"
-                && u.OverlayMessage == "게임 화면을 확인하지 못했습니다. 대상 창과 인식 영역을 확인하세요."),
+                && u.OverlayMessage == "Synthetic actual failure"),
                 "Actual capture failure did not publish separate overlay and diagnostic messages");
             Check(telemetry.Snapshot().Events.Any(e => e.Code == DebugCode.CAPTURE_FAILED) && telemetry.Snapshot().Values.CaptureWait == CaptureWaitReason.None, "Unclassified capture error was hidden");
             Volatile.Write(ref state, 1);

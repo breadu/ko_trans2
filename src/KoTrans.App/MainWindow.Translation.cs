@@ -122,6 +122,9 @@ public partial class MainWindow
             await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
             localStart.Token.ThrowIfCancellationRequested();
             if (closing || Current.Id != profile.Id || !ReferenceEquals(overlay, startingOverlay)) return false;
+            // Validate the dictionary before loading a model. Reuse this snapshot
+            // so the engine and its context belong to the same start attempt.
+            var preparedContext = PrepareProfileTranslationContext();
             if (profile.ShowTranslation && !App.MockAi && profile.Translation.Provider == TranslationProvider.HyMtLocal) {
                 var owner = startingOverlay.IsVisible && (!IsVisible || WindowState == WindowState.Minimized)
                     ? (Window)startingOverlay : this;
@@ -157,7 +160,7 @@ public partial class MainWindow
                 learning?.ObserveFrame(frame);
                 return frame;
             }
-            var active = CreateProfilePipeline(learning ?? ocr, ai, CaptureSource);
+            var active = CreateProfilePipeline(learning ?? ocr, ai, CaptureSource, preparedContext);
             ObserveTranslation(active, profile.Id, watch);
             if (!string.IsNullOrWhiteSpace(initialSource)) overlay?.SetResult(initialSource, initialTranslation ?? "", "");
             StartProfileMonitoring(active, watch, initialText: profile.ShowTranslation && string.IsNullOrWhiteSpace(initialTranslation) ? initialSource : null);
@@ -176,10 +179,9 @@ public partial class MainWindow
             if (ex is OcrInitializationException) ocrPresentationError = true;
             var reason = StartFailureMessage(ex, profile.ShowTranslation);
             if (ex is CaptureUnavailableException && profile.CaptureMode == CaptureMode.Window && target is null)
-                ReportTranslationStartFailure(reason, profile.GameWindow is null ? "대상 게임 창을 선택하세요" : "대상 게임 창을 찾지 못했어요",
-                    profile.GameWindow is null ? "프로필 설정 → 캡처 · OCR에서 선택하세요." : "게임 실행 후 캡처 · OCR에서 대상을 확인하세요.",
-                    "게임 창을 찾지 못했습니다. 캡처·OCR에서 대상 창을 확인하세요.");
-            else ReportTranslationStartFailure(reason, overlayReason: OverlayStartFailureMessage(ex, profile.ShowTranslation, profile.Translation.Provider));
+                ReportTranslationStartFailure(reason, profile.GameWindow is null ? "대상 게임 창을 선택하세요" : "대상 게임 창을 확인하세요",
+                    profile.GameWindow is null ? "프로필 설정 → 캡처 · OCR에서 선택하세요." : reason);
+            else ReportTranslationStartFailure(reason);
             return false;
         }
         finally {
@@ -189,29 +191,20 @@ public partial class MainWindow
             UpdateOcrExecution();
         }
     }
-    private void ReportTranslationStartFailure(string reason, string? title = null, string? detail = null, string? overlayReason = null)
+    private void ReportTranslationStartFailure(string reason, string? title = null, string? detail = null)
     {
         if (debugTelemetry is not null) {
             long session = debugTelemetry.BeginSession(Current.OcrOptions(), Current.Translation, TranslationPipeline.DefaultSettle.TotalMilliseconds);
             debugTelemetry.Record(session, DebugCode.SESSION_START_FAILED, DebugReason.Rejected,
                 v => v with { LastError = DebugReason.Rejected, TranslationState = DebugReason.Rejected });
         }
-        model.Status = reason; overlay?.SetResult(null, null, overlayReason ?? reason);
+        model.Status = reason; overlay?.SetResult(null, null, reason);
         ShowFeedback(FeedbackKind.Error, title ?? (Current.ShowTranslation ? "자동 번역을 시작하지 못했어요" : "원문 인식을 시작하지 못했어요"), detail ?? reason, replaceError: true);
         translationStartFeedback = FeedbackCount;
     }
     private string TranslationButtonCaption(bool running) => (ready && !Current.ShowTranslation ? "원문 인식 " : "번역 ") + (running ? "중지" : "시작");
     internal static string StartFailureMessage(Exception error, bool translate) => error is TranslationException or CaptureUnavailableException or InvalidDataException or OcrInitializationException
-        ? error.Message : translate ? "번역 준비 실패 · 모델과 설정을 확인하세요." : "원문 인식 준비 실패 · OCR 모델과 캡처 설정을 확인하세요.";
-    private static string OverlayStartFailureMessage(Exception error, bool translate, TranslationProvider provider)
-    {
-        if (error is OcrInitializationException) return "OCR 모델을 불러오지 못했습니다. 모델 파일을 확인하세요.";
-        if (error is CaptureUnavailableException) return "게임 화면을 확인하지 못했습니다. 대상 창과 인식 영역을 확인하세요.";
-        if (error is TranslationException && provider == TranslationProvider.HyMtLocal)
-            return "로컬 AI 모델을 준비하지 못했습니다. 설치 상태와 메모리를 확인하세요.";
-        if (error is TranslationException) return "번역 서비스를 준비하지 못했습니다. 번역 서비스 설정을 확인하세요.";
-        return translate ? "번역 준비에 실패했습니다. 모델과 설정을 확인하세요." : "원문 인식 준비에 실패했습니다. OCR 모델과 캡처 설정을 확인하세요.";
-    }
+        ? error.Message : translate ? "번역 준비 중 오류가 발생했습니다. 다시 시작해 주세요." : "원문 인식 준비 중 오류가 발생했습니다. 다시 시작해 주세요.";
     internal void StartProfileMonitoring(TranslationPipeline active, bool continuous, Action<RecognitionInputPlan>? startInput = null, string? initialText = null)
     {
         var plan = RecognitionInputPlan.For(Current, continuous);

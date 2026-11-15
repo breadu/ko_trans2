@@ -79,11 +79,17 @@ public partial class MainWindow
         dialog.Closed += (_, _) => profileDialogs.Remove(dialog);
         return dialog;
     }
-    internal TranslationPipeline CreateProfilePipeline(IOcrService engine, ITranslationService? service, Func<CancellationToken, Task<ImageFrame>> capture)
+    private (IReadOnlyList<CharacterEntry> Characters, string Prompt) PrepareProfileTranslationContext()
+    {
+        var profile = Current;
+        var characters = profile.ShowTranslation && TranslationProviderCatalog.Get(profile.Translation.Provider).SupportsCharacterDictionary ? LoadProfileCharacters() : [];
+        return (characters, profile.ShowTranslation ? TranslationPrompt.Build(characters) : "");
+    }
+    internal TranslationPipeline CreateProfilePipeline(IOcrService engine, ITranslationService? service, Func<CancellationToken, Task<ImageFrame>> capture,
+        (IReadOnlyList<CharacterEntry> Characters, string Prompt)? preparedContext = null)
     {
         var profile = Current; var options = profile.OcrOptions(); var aiOptions = profile.Translation with { };
-        var characters = profile.ShowTranslation && TranslationProviderCatalog.Get(aiOptions.Provider).SupportsCharacterDictionary ? LoadProfileCharacters() : [];
-        var prompt = profile.ShowTranslation ? TranslationPrompt.Build(characters) : "";
+        var (characters, prompt) = preparedContext ?? PrepareProfileTranslationContext();
         var session = profile.ShowTranslation ? contexts.Get(profile.Id, options, aiOptions, prompt) : new TranslationSession();
         TranslationPipeline? active = null;
         active = new(engine, service, capture, options, aiOptions, session, prompt, gameQa: gameQa, qaProfile: GameQaProfile.From(profile), translationEnabled: profile.ShowTranslation,
