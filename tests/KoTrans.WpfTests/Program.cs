@@ -83,6 +83,7 @@ internal static class Program
                 Case("Overlay furigana cancellation and local-reading fallback", OverlayFuriganaTests.CancellationAndFallback);
                 Case("Study Mock service", WpfTests.StudyMock);
                 Case("Study settings/provider invalidation reason and recovery", StudyNoticeTests.SettingsInvalidation);
+                Case("Study source card visibility across empty notices, errors and recovery", StudyNoticeTests.EmptySourceCard);
                 Case("Study close-save, resident reuse and profile persistence", StudyPlacementTests.CloseAndProfiles);
                 Case("Study monitors, mixed DPI and minimized/fallback preservation", StudyPlacementTests.MonitorChanges);
                 Case("Study native frame gaps and client/caption protection", StudyResizeTests.Borders);

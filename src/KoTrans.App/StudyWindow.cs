@@ -37,6 +37,7 @@ internal sealed class StudyWindow : Window
     private string sourceLanguage = "en";
     private readonly List<(string Word, Button Button)> pronunciationButtons = [];
     private readonly StackPanel results = new() { Name = "StudySections" };
+    private readonly Border sourcePanel;
     private readonly TextBlock original = new()
     {
         Name = "StudyOriginalText",
@@ -136,13 +137,14 @@ internal sealed class StudyWindow : Window
         sourceContent.Children.Add(rubySentence);
         sourceContent.Children.Add(reading);
         sourceContent.Children.Add(readingNotice);
-        document.Children.Add(new Border
+        sourcePanel = new Border
         {
-            Name = "StudySourcePanel", Background = Card,
+            Name = "StudySourcePanel", Background = Card, Visibility = Visibility.Collapsed,
             BorderBrush = Divider, BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8), Padding = new Thickness(18, 15, 18, 17),
             Child = sourceContent
-        });
+        };
+        document.Children.Add(sourcePanel);
         loadingHourglass.RenderTransform = hourglassRotation;
         DockPanel.SetDock(loadingHourglass, Dock.Left);
         progressRow.Children.Add(loadingHourglass);
@@ -262,6 +264,7 @@ internal sealed class StudyWindow : Window
         sourceLanguage = nextLanguage;
         input = text;
         original.Text = text;
+        sourcePanel.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
         scroll.ResetToTop();
     }
 
