@@ -139,7 +139,7 @@ internal static class MuramasaTests
             await Until(() => updates.Any(u => u.State == PipelineState.Error), "Provider failure was not reported");
             var initialFailure = updates.First(u => u.State == PipelineState.Error);
             Check(initialFailure.Message == "Synthetic provider failure" && initialFailure.FailureArea == PipelineStatusArea.Translation
-                && initialFailure.OverlayMessage == "AI 서비스 요청에 실패했습니다. 서버 상태를 확인하세요.",
+                && initialFailure.OverlayMessage == "Synthetic provider failure",
                 "Translation failure lost its short overlay notice or detailed diagnostics");
             if (settledPoses) await Until(() => updates.Count(u => u.State == PipelineState.Error) > 1, "Failed translation was not restored during frame reuse");
             await Task.Delay(170);

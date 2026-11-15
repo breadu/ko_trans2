@@ -58,7 +58,7 @@ internal static class WpfTests
             Check(Elements<ScrollViewer>(window).Count() == 1,
                 "Reader must contain one scrolling document, not nested panels");
 
-            window.SetSource("The journey begins. 学校へ行きます。");
+            window.SetSource("The journey begins. 学校へ行きます。", "en");
             Check(window.Input == "The journey begins. 学校へ行きます。"
                 && Named<TextBlock>(window, "StudyOriginalText").Text == window.Input,
                 "Original source was not shown first");
@@ -240,6 +240,29 @@ internal static class WpfTests
                 "A new source must discard old ruby without changing the original text");
         }
         finally { Close(window); }
+    }
+    internal static void StudyPronunciationByLanguage()
+    {
+        var window = Track(new StudyWindow(new(), resolveVoiceDirectory: () => null));
+        try {
+            window.SetSource("学校へ行きます。", "ja");
+            foreach (var pronunciation in new[] { "/ɡakːoː/", "[がっこう] (gakkou)", "gakkou", "がっこう (갓코오)" }) {
+                window.Render(new("학교에 갑니다.", "へ는 이동 방향을 나타냅니다.",
+                    [new("学校", pronunciation, "学ぶ場所。", "학교", [], "교육 기관을 나타냅니다.")]));
+                Layout(window, 490, 610);
+                Check(!Text(window).Contains(pronunciation) && Text(window).Contains("学校")
+                    && Text(window).Contains("교육 기관을 나타냅니다."),
+                    "Japanese vocabulary displayed a raw pronunciation or lost its word/tip");
+            }
+            window.Render(new(null, null, [new("学校", "がっこう", "学ぶ場所。", "학교", [], "")]));
+            Check(Elements<StackPanel>(window).Any(p => p.Name == "JapaneseRubyPair")
+                && Text(window).Contains("がっこう"), "Hiding Japanese side pronunciation removed valid furigana");
+            window.SetSource("The journey begins.", "en"); window.Render(Example());
+            Check(Text(window).Contains("/ˈdʒɜːrni/"), "Switching to English did not restore IPA pronunciation");
+            window.SetSource("次の文です。", "ja"); window.Render(Example());
+            Check(!Text(window).Contains("/ˈdʒɜːrni/") && Text(window).Contains("journey"),
+                "Returning to Japanese retained IPA from the previous English explanation");
+        } finally { Close(window); }
     }
     private sealed class MockExplanation : IExplanationService
     {

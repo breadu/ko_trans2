@@ -28,5 +28,5 @@ public sealed record GameQaRecord(int SchemaVersion, Guid RequestId, DateTimeOff
     // full input frame and reused, not inferred anew.
     public IReadOnlyList<OcrLine> NvlPrefix { get; init; } = [];
 }
-public static class OcrAlgorithmRevision { public const string Current = "ocr-layout-v12-terminal-marker-tracking-20261106"; }
+public static class OcrAlgorithmRevision { public const string Current = "ocr-layout-v25-dialogue-start-tolerance-20261115"; }
 public sealed record GameQaSnapshot(ImageFrame Frame, GameQaRecord Record);

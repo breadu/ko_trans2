@@ -47,7 +47,9 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
     private readonly RepeatedAnimationGuard animations = new();
     internal bool SuppressRepeatedAnimations { get; init; } = true;
     private readonly OcrRegionTracker ocrRegion = new();
+    private readonly DialogueLayoutHistory dialogueLayout = new();
     private readonly AdvTextRecovery advRecovery = new();
+    private readonly JapaneseAdvRecovery japaneseAdv = new();
     private readonly NvlOcrTracker nvlOcr = new();
     private readonly NvlTranslationPage nvlPage = new();
     private readonly RepeatedOcrCandidate repeatedCandidate = new();
@@ -445,6 +447,8 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
                             && ocr is ILearnedMarkerFrameGate { LearningStatus.Mode: not MarkerLearningMode.Off };
                         if(markerRoi)runOptions=ocrOptions with { SearchArea=region };
                         var input = !markerRoi && region is { } area ? OcrRegionTracker.Crop(job.Frame, area) : job.Frame;
+                        var layoutHint = dialogueLayout.Get(job.Frame, ocrOptions, job.Manual || job.Force || job.VerifyAcceptedSource);
+                        runOptions = runOptions with { DialogueHint = region is null && search is null ? layoutHint : null };
                         lock (sync)
                         {
                             if (!IsCurrentOcrJob(job)) continue;
@@ -520,6 +524,22 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
                             }
                             advRecovery.Observe(job.Frame,recognized,search is null);
                         }
+                        if (ocr.Capabilities.Roi && JapaneseAdvRecovery.Supports(ocrOptions)
+                            && japaneseAdv.Retry(job.Frame, recognized) is { } dialogueArea) {
+                            var retryOptions = ocrOptions with { SearchArea = dialogueArea, KeepLocalParagraph = true };
+                            lock (sync) {
+                                if (!IsCurrentOcrJob(job)) continue;
+                                if (gameQa is not null && qaProfile is not null)
+                                    qaId = gameQa.Begin(job.Frame, retryOptions, qaProfile, job.CaptureMs);
+                            }
+                            // Once the selected text is an unchanged external label, an error
+                            // must use the normal OCR failure path, not send that label to AI.
+                            recognized = await RecognizeMeasuredAsync(job.Frame, retryOptions, cancellation.Token,
+                                DebugReason.StaticLabelRecovery, job.Manual || job.Force).ConfigureAwait(false);
+                            // Empty recovery means no new dialogue, never a replay of the old text.
+                            inputResult = recognized; runOptions = retryOptions;
+                            region = null; markerRoi = false; search = dialogueArea; fullSearch = false;
+                        }
                         if (nvl) recognized=NvlOcrTracker.ArrangeRows(recognized,ocrOptions);
                         if (nvl && !job.Manual && !job.FullSearch) recognized = nvlOcr.Stabilize(job.Frame,recognized);
                         cancellation.Token.ThrowIfCancellationRequested(); text = TranslationPrompt.Normalize(recognized.Text);
@@ -532,6 +552,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
                             lock (sync) {
                                 if (!IsCurrentOcrJob(job)) continue;
                                 animations.Reset(); repeatedCandidate.Reset(); recognizedFrameHasFullCoverage = false;
+                                dialogueLayout.Reset();
                                 if (nvl) { nvlOcr.Observe(job.Frame, recognized); recognizedText = recognizedOriginal = null; verifiedFrames.Clear(); verifiedOrder.Clear(); }
                                 frames.Observe(recognized, job.Frame, fullSearch);
                                 gameQa?.Complete(qaId, inputResult, text, false, runOptions);
@@ -553,7 +574,9 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
                                 candidateSince = Stopwatch.GetTimestamp();
                             }
                             if (nvl) nvlOcr.Observe(job.Frame, recognized);
+                            if (JapaneseAdvRecovery.Supports(ocrOptions)) japaneseAdv.Observe(job.Frame, recognized);
                             ocrRegion.Observe(job.Frame, recognized, region is not null);
+                            dialogueLayout.Observe(job.Frame, recognized, ocrOptions, fullSearch);
                             var searched = !markerRoi && region is { } cropArea && runOptions.SearchArea is { } nested
                                 ? nested with { X = nested.X + cropArea.X, Y = nested.Y + cropArea.Y } : region ?? runOptions.SearchArea;
                             fullCoverage = fullSearch || recognizedFrameHasFullCoverage && recognizedFrame is not null
@@ -764,7 +787,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
                 }
             }
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException) { DiagnosticTranslation(job, DebugCode.TRANSLATION_FAILED, DebugReason.TranslationFailure, failure: ex); lock (sync) { gameQa?.Finish(qaId, "failed"); if (translationCancellation == cancellation) { translationFailure = FailureMessage(ex); translationOverlayFailure = TranslationOverlayMessage(ex); translationState = PipelineState.Error; gameQa?.Finish(translationQaId, "failed"); } } Fail(job.Version, ex, PipelineStatusArea.Translation); }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { DiagnosticTranslation(job, DebugCode.TRANSLATION_FAILED, DebugReason.TranslationFailure, failure: ex); lock (sync) { gameQa?.Finish(qaId, "failed"); if (translationCancellation == cancellation) { translationFailure = FailureMessage(ex, PipelineStatusArea.Translation); translationOverlayFailure = TranslationOverlayMessage(ex); translationState = PipelineState.Error; gameQa?.Finish(translationQaId, "failed"); } } Fail(job.Version, ex, PipelineStatusArea.Translation); }
         finally {
             lock (sync) { if (translationCancellation == cancellation) translationCancellation = null; PublishActivity(); }
             cancellation.Dispose();
@@ -839,81 +862,27 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
     }
     private static PipelineStatusArea AcceptedSourceAreas(OcrResult? recognized) => PipelineStatusArea.Input
         | (recognized is null ? PipelineStatusArea.None : PipelineStatusArea.Ocr | PipelineStatusArea.Capture);
-    private static string FailureMessage(Exception ex) => ex is TranslationException or CaptureUnavailableException or OcrInitializationException
-        ? ex.Message : "처리 실패 · 모델 파일, 캡처 대상 또는 설정을 확인하고 다시 실행하세요.";
-    private void Fail(long request, Exception ex, PipelineStatusArea area = PipelineStatusArea.Ocr) => Emit(request, PipelineState.Error, FailureMessage(ex),
-        failureArea: area, overlayMessage: area == PipelineStatusArea.Ocr ? OcrOverlayMessage(ex)
-            : area == PipelineStatusArea.Translation ? TranslationOverlayMessage(ex)
-            : area == PipelineStatusArea.Capture ? "게임 화면을 확인하지 못했습니다. 대상 창과 인식 영역을 확인하세요." : null);
+    private static string FailureMessage(Exception ex, PipelineStatusArea area = PipelineStatusArea.Ocr)
+    {
+        // These types carry guidance written by the responsible component.
+        // Raw system/transport exceptions may contain paths, URLs or response bodies.
+        if (ex is TranslationException or CaptureUnavailableException or OcrInitializationException) return ex.Message;
+        return area switch {
+            PipelineStatusArea.Translation => "번역 처리 중 오류가 발생했습니다. 번역을 중지한 뒤 다시 시작하세요.",
+            PipelineStatusArea.Capture => "화면 캡처 중 오류가 발생했습니다. 다시 시도해 주세요.",
+            _ => "문자 인식 중 오류가 발생했습니다. 인식을 중지한 뒤 다시 시작하세요."
+        };
+    }
+    private void Fail(long request, Exception ex, PipelineStatusArea area = PipelineStatusArea.Ocr)
+    {
+        string message = FailureMessage(ex, area);
+        Emit(request, PipelineState.Error, message, failureArea: area, overlayMessage: message);
+    }
     private string TranslationOverlayMessage(Exception ex) => TranslationOverlayMessage(options.Provider, ex);
     internal static string TranslationOverlayMessage(TranslationProvider provider, Exception ex)
-    {
-        // Provider plus known messages emitted by our adapters: never infer an OOM from an arbitrary HTTP 500.
-        string message = ex.Message;
-        if (provider == TranslationProvider.Ollama) {
-            if (message.StartsWith("Ollama 서버 주소 또는 모델을 찾을 수 없습니다.", StringComparison.Ordinal))
-                return "Ollama 서버 주소나 설치된 모델을 확인하세요.";
-            if (message.StartsWith("Ollama가 요청 형식을 거부했습니다.", StringComparison.Ordinal))
-                return "Ollama가 요청을 처리하지 못했습니다. 모델의 요청 형식을 확인하세요.";
-            if (message.StartsWith("Ollama가 메모리 부족 오류를 반환", StringComparison.Ordinal))
-                return "Ollama의 메모리가 부족합니다. 작은 모델을 선택하거나 다른 프로그램을 종료하세요.";
-            if (message.StartsWith("Ollama 서버와 모델 실행기 사이의 연결", StringComparison.Ordinal))
-                return "Ollama 내부 연결이 끊겼습니다. 번역을 중지한 뒤 다시 시작하세요.";
-            if (message.StartsWith("Ollama 모델 실행기의 응답", StringComparison.Ordinal))
-                return "Ollama 모델이 응답하지 않았습니다. 번역을 중지한 뒤 다시 시작하세요.";
-            if (message.StartsWith("Ollama 서버에 연결하지 못", StringComparison.Ordinal))
-                return "Ollama에 연결하지 못했습니다. 서버 실행 상태를 확인하세요.";
-            if (message.StartsWith("Ollama ", StringComparison.Ordinal) && message.Contains("제한 초과", StringComparison.Ordinal))
-                return "Ollama 번역 시간이 초과되었습니다. 모델 실행 상태와 제한 시간을 확인하세요.";
-            return "Ollama 서버에서 오류가 발생했습니다. 서버 상태를 확인하세요.";
-        }
-        if (provider == TranslationProvider.HyMtLocal) {
-            // The runtime may recommend checking memory AND graphics drivers
-            // even when neither is confirmed as the cause. Report low memory
-            // only for an explicit OOM or a failed CPU RAM requirement.
-            if (ex is OutOfMemoryException
-                || message.Contains("메모리가 부족합니다.", StringComparison.Ordinal)
-                || (message.Contains("CPU 실행에는 가용 RAM ", StringComparison.Ordinal)
-                    && message.Contains("GiB 이상이 필요합니다.", StringComparison.Ordinal)))
-                return "로컬 번역에 필요한 메모리가 부족합니다.";
-            if (message.StartsWith("로컬 번역이 출력 한도", StringComparison.Ordinal))
-                return "번역할 글이 너무 깁니다. 대사 영역을 줄여 주세요.";
-            return "로컬 번역에 실패했습니다. 모델 상태를 확인하고 다시 시도하세요.";
-        }
-        if (provider == TranslationProvider.DeepL && message.StartsWith("DeepL API 번역 문자 사용 한도", StringComparison.Ordinal))
-            return "DeepL 번역 사용량 한도에 도달했습니다.";
-        if (message.StartsWith("API 키", StringComparison.Ordinal) || message.StartsWith("DeepL API 키", StringComparison.Ordinal))
-            return "API 키와 모델 접근 권한을 확인하세요.";
-        if (message.Contains("요청 한도", StringComparison.Ordinal) || message.Contains("요청 빈도 제한", StringComparison.Ordinal))
-            return "요청 한도에 도달했습니다. 잠시 후 다시 시도하세요.";
-        if (message.Contains("시간이 초과", StringComparison.Ordinal) || message.Contains("시간 초과", StringComparison.Ordinal))
-            return "번역 응답 시간이 초과되었습니다. 서버 상태와 제한 시간을 확인하세요.";
-        if (message.Contains("연결하지 못", StringComparison.Ordinal) || message.Contains("연결이 끊겼", StringComparison.Ordinal))
-            return "AI 서버 연결이 끊겼습니다. 네트워크 상태를 확인하세요.";
-        if (message.StartsWith("Gemini 응답이 중단", StringComparison.Ordinal))
-            return "Gemini 번역이 중단되었습니다. 다시 시도하세요.";
-        if (message.Contains("번역문을 반환하지", StringComparison.Ordinal) || message.Contains("번역 응답에 결과가 없", StringComparison.Ordinal))
-            return "AI가 번역문을 반환하지 않았습니다. 모델 설정을 확인하세요.";
-        if (message.Contains("응답 형식", StringComparison.Ordinal) || message.Contains("응답 문자 인코딩", StringComparison.Ordinal))
-            return "AI 번역 결과를 읽지 못했습니다. 모델 설정을 확인하세요.";
-        if (message.Contains("일시적으로 사용할 수 없", StringComparison.Ordinal))
-            return "AI 서비스를 잠시 사용할 수 없습니다. 다시 시도하세요.";
-        return "AI 서비스 요청에 실패했습니다. 서버 상태를 확인하세요.";
-    }
-    private static string OcrOverlayMessage(Exception ex)
-    {
-        if (ex is UnauthorizedAccessException || ex.Message.Contains("읽을 권한", StringComparison.Ordinal))
-            return "OCR 모델 파일을 읽을 수 없습니다. 파일 접근 권한을 확인하세요.";
-        if (ex is FileNotFoundException || ex.Message.Contains("찾을 수 없습니다", StringComparison.Ordinal) || ex.Message.Contains("모델이 없습니다", StringComparison.Ordinal))
-            return "OCR 모델 파일을 찾을 수 없습니다. 모델 파일을 확인하세요.";
-        if (ex.Message.Contains("SHA-256", StringComparison.Ordinal) || ex.Message.Contains("손상", StringComparison.Ordinal) || ex.Message.Contains("크기가 올바르지", StringComparison.Ordinal))
-            return "OCR 모델 파일이 손상되었거나 올바르지 않습니다. 모델 파일을 다시 준비하세요.";
-        if (ex.Message.Contains("너무 깁니다", StringComparison.Ordinal))
-            return "인식한 글이 너무 깁니다. 대사 영역을 줄여 주세요.";
-        return ex is OcrInitializationException || ex.Message.Contains("ONNX", StringComparison.Ordinal) || ex.Message.Contains("manifest", StringComparison.Ordinal)
-            ? "OCR 모델을 불러오지 못했습니다. 모델 파일을 확인하세요."
-            : "문자 인식에 실패했습니다. 인식 영역과 OCR 설정을 확인하세요.";
-    }
+        => ex is OutOfMemoryException ? (provider == TranslationProvider.HyMtLocal
+            ? "로컬 번역에 필요한 메모리가 부족합니다." : "번역 처리에 필요한 메모리가 부족합니다.")
+            : FailureMessage(ex, PipelineStatusArea.Translation);
     private void ReportCaptureState(long request, Exception ex)
     {
         if (ex is CaptureUnavailableException { IsExpectedWait: true })
@@ -924,7 +893,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
     private static string CaptureWaitOverlayMessage(CaptureUnavailableException ex) => ex.WaitReason switch
     {
         CaptureWaitReason.NotForeground => "게임 창을 앞으로 가져오세요. 활성화되면 인식을 재개합니다.",
-        CaptureWaitReason.HiddenOrMinimized => "게임 창이 최소화되어 있습니다. 창을 복원하세요.",
+        CaptureWaitReason.HiddenOrMinimized => "게임 창이 최소화되었거나 숨겨져 있습니다. 창을 다시 표시하세요.",
         CaptureWaitReason.WindowBusy => "게임 화면을 불러오는 중입니다…",
         CaptureWaitReason.ScalingTransition => "게임 화면이 바뀌었습니다. 잠시 후 다시 확인합니다.",
         CaptureWaitReason.Occluded => "KO Trans 2 창이 게임 화면을 가리고 있습니다. 창을 옮기거나 최소화하세요.",
@@ -963,7 +932,7 @@ public sealed partial class TranslationPipeline : IAsyncDisposable
             await Task.WhenAll(monitor ?? Task.CompletedTask, worker ?? Task.CompletedTask, manualDrained.Task).ConfigureAwait(false);
             await Task.WhenAll(translations).ConfigureAwait(false);
         }
-        finally { ocrResultCache.Clear(); lifetime.Dispose(); captureGate.Dispose(); monitorWake.Dispose(); recognizedFrame = null; ocrRegion.Reset(); nvlOcr.Reset(); nvlPage.Reset(); frames.Reset(); animations.Reset(); repeatedCandidate.Reset(); verifiedFrames.Clear(); verifiedOrder.Clear(); }
+        finally { ocrResultCache.Clear(); lifetime.Dispose(); captureGate.Dispose(); monitorWake.Dispose(); recognizedFrame = null; ocrRegion.Reset(); dialogueLayout.Reset(); japaneseAdv.Reset(); nvlOcr.Reset(); nvlPage.Reset(); frames.Reset(); animations.Reset(); repeatedCandidate.Reset(); verifiedFrames.Clear(); verifiedOrder.Clear(); }
         // Shared OCR remains owned by the app. Native inference has drained, never forcibly terminated.
     }
 }

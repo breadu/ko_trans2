@@ -118,11 +118,26 @@ internal static class SubtitleUxTests
                 "Restart retained instruction or previous session text");
             profile.ShowTranslation = false; window.Apply(profile); window.ShowStoppedPrompt();
             Check(guide.Text.Contains("원문 인식") && guide.Visibility == Visibility.Visible, "Original-only stop has no instruction");
-            window.BeginSession(true); window.DismissTriggerPrompt();
+            window.BeginSession(true); window.DismissInputPrompt();
             Check(guide.Visibility == Visibility.Collapsed && !source.Text.Contains("트리거") && translation.Text.Length == 0,
                 "Instruction polluted source/translation data");
             window.SetPipelineResult(new(2, PipelineState.Stopped, "stopped"));
             Check(guide.Visibility == Visibility.Visible, "Pipeline stop did not restore stopped instruction");
+            window.BeginSession(false, waitForClipboard: true);
+            Check(guide.Visibility == Visibility.Visible && guide.Text == "클립보드의 데이터를 기다리고 있습니다",
+                "Clipboard startup lacks its initial waiting instruction");
+            window.SetPipelineResult(new(3, PipelineState.Watching, "waiting")); window.SetBusy(false);
+            Check(guide.Visibility == Visibility.Visible, "Idle update removed clipboard instruction before first input");
+            window.SetResult("Copied source.", "복사된 번역", "");
+            window.SetPipelineResult(new(4, PipelineState.Watching, "waiting again")); window.SetBusy(false);
+            Check(guide.Visibility == Visibility.Collapsed && source.Text == "Copied source." && translation.Text == "복사된 번역",
+                "Clipboard instruction returned after the first result or replaced subtitle content");
+            window.BeginSession(false, waitForClipboard: true);
+            window.SetPipelineResult(new(5, PipelineState.Error, "합성 입력 오류") { FailureArea = PipelineStatusArea.Input });
+            Check(guide.Visibility == Visibility.Collapsed && Named<TextBlock>(window, "OverlayNotice").Text == "합성 입력 오류",
+                "Clipboard instruction covered an actual error");
+            window.ShowStoppedPrompt();
+            Check(guide.Text.Contains("시작") && !guide.Text.Contains("클립보드"), "Stopped clipboard session still claims to wait for input");
         } finally { Close(window); Close(window.Chrome); }
     }
     internal static void OriginalOnlyRecognition()

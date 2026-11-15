@@ -60,7 +60,9 @@ public sealed class OcrRegionTracker
         // NVL lines already exclude visual annotations/continuation markers. Raw
         // diagnostic candidates must not reintroduce them when restoring a crop.
         var visible = options.ReadingMode == "NVL" ? result.Lines : result.Candidates ?? result.Lines;
-        return result with { Lines = LayoutProcessor.Arrange(visible.Select(line => line with { Bounds = Shift(line.Bounds) }).ToList(), options, full.Width, full.Height),
+        var shifted = visible.Select(line => line with { Bounds = Shift(line.Bounds) }).ToList();
+        return result with { Lines = DialogueRegionSelection.Supported(options) ? DialogueRegionSelection.Arrange(shifted)
+                : LayoutProcessor.Arrange(shifted, options, full.Width, full.Height),
             Candidates = (result.Candidates ?? result.Lines).Select(line => line with { Bounds = Shift(line.Bounds) }).ToArray(),
             Characters = result.Characters.Select(c => c with { Bounds = Shift(c.Bounds) }).ToArray(),
             DetectedBoxes = result.DetectedBoxes.Select(Shift).ToArray(),

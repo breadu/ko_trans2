@@ -113,7 +113,11 @@ internal static class WordDictionaryTests
             pending[1].SetResult([new(0, 3, "new", "new")]); Pump(); Check(original.Words.Single().Surface == "new", "Latest tokenization wasn't applied");
             window.SetResult("failure", null, ""); pending[2].SetException(new IOException("synthetic dictionary unavailable")); Pump();
             Check(original.Text == "failure" && Named<TextBlock>(window, "OverlayNotice").Text.Contains("단어 정보"), "Analyzer failure erased source or silently failed");
-            window.SetResult("closed", null, ""); Close(window); pending[3].SetResult([new(0, 6, "closed", "closed")]); Pump();
+            Check(!Named<TextBlock>(window, "OverlayNotice").Text.Contains("IPA") && !Named<TextBlock>(window, "OverlayNotice").Text.Contains("synthetic"),
+                "Unknown analyzer failure blamed Japanese files or exposed raw diagnostics");
+            window.SetResult("invalid", null, ""); pending[3].SetException(new InvalidDataException("단어 위치가 원문과 일치하지 않습니다.")); Pump();
+            Check(Named<TextBlock>(window, "OverlayNotice").Text.Contains("단어 위치가 원문과 일치하지"), "Known token alignment cause was replaced by dictionary settings advice");
+            window.SetResult("closed", null, ""); Close(window); pending[4].SetResult([new(0, 6, "closed", "closed")]); Pump();
             Check(original.Words.Count == 0, "Late analysis recreated runs after close");
         } finally { foreach (var task in pending) task.TrySetCanceled(); Close(window); Close(window.Chrome); }
     }
@@ -178,6 +182,18 @@ internal static class WordDictionaryTests
             original.Press(0, new()); original.Release(0, new()); request.SetException(new IOException("synthetic browser unavailable")); Pump();
             Check(Named<TextBlock>(window, "OverlayNotice").Text.Contains("사전 페이지를 열지 못") && Text(window).Contains("번역 유지")
                 && original.Text == "word", "Popup failure erased source/translation or hid the cause");
+            foreach (var failure in new Exception[] {
+                new InvalidDataException("단어 사전 주소에 검색어 자리 %%SS가 필요합니다."),
+                new DictionaryBrowserException("사전 브라우저 응답을 기다리다 시간이 초과되었습니다."),
+                new DictionaryBrowserException("사전 팝업에는 Microsoft Edge 또는 Google Chrome이 필요합니다."),
+                new FileNotFoundException("private browser-profile file"), new UnauthorizedAccessException("private profile path") }) {
+                request = new TaskCompletionSource(); original.Press(0, new()); original.Release(0, new()); request.SetException(failure); Pump();
+                string notice = Named<TextBlock>(window, "OverlayNotice").Text;
+                if (failure is InvalidDataException or DictionaryBrowserException)
+                    Check(notice == failure.Message, "Known dictionary popup cause was overwritten");
+                else Check(!notice.Contains("private") && !notice.Contains("설치"), "Unknown file failure blamed missing browser installation or exposed a path");
+                Check(original.Text == "word" && Text(window).Contains("번역 유지"), "Dictionary error changed the subtitle content");
+            }
         } finally { request.TrySetCanceled(); Close(window); Close(window.Chrome); }
     }
     private static bool CompleteBool(Task<bool> task) { Complete(task); return task.Result; }

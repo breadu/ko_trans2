@@ -126,8 +126,10 @@ public partial class MainWindow
                     dialog ??= CreateProgress();
                     if (!dialog.IsVisible) dialog.Show();
                     var message = ex is TranslationException ? ex.Message : ex is UnauthorizedAccessException
-                        ? "로컬 번역 폴더에 저장할 수 없습니다. 폴더 권한을 확인한 뒤 다시 시도해 주세요."
-                        : "로컬 AI 번역을 준비하지 못했습니다. 인터넷 연결과 저장 공간을 확인한 뒤 다시 시도해 주세요.";
+                        ? "로컬 번역 파일에 접근할 수 없습니다. 폴더 권한을 확인한 뒤 다시 시도해 주세요."
+                        : ex is System.Net.Http.HttpRequestException
+                            ? "로컬 AI 모델 다운로드 요청에 실패했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요."
+                            : "로컬 AI 파일 또는 실행기를 준비하는 중 오류가 발생했습니다. 프로그램을 다시 시작하고, 계속 실패하면 로컬 AI 진단 기록을 확인해 주세요.";
                     if (!await dialog.RetryAsync(message).WaitAsync(token)) return false;
                 }
             }

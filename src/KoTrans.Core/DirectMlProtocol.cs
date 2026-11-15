@@ -15,7 +15,7 @@ public static class DirectMlProtocol
         if (frame.Pixels.Length > MaxPixels || options.Language is not ("en" or "ja") || options.ReadingMode is not ("ADV" or "NVL")
             || options.DetectionLongSide != 0 && options.DetectionLongSide is < 32 or > 1920
             || options.KeepLocalParagraph && options.SearchArea is null || !GameMarkerGeometry.ValidPatterns(options.MarkerPatterns)
-            || !TerminalMarkerReference.Valid(options.MarkerReference))
+            || !TerminalMarkerReference.Valid(options.MarkerReference) || !DialogueLayoutHint.Valid(options.DialogueHint))
             throw new ArgumentException("OCR 입력 또는 옵션이 올바르지 않습니다.");
         if (options.SearchArea is { } area && (!area.IsValid || area.X < 0 || area.Y < 0
             || (long)area.X + area.Width > frame.Width || (long)area.Y + area.Height > frame.Height))

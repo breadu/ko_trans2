@@ -21,5 +21,7 @@ pwsh -NoProfile -File scripts/Test-Fast.ps1 -Suite Ocr
 
 앱을 닫을 때는 알림 영역 아이콘의 **종료**를 사용한다. 실화면 검증은 `scripts/Test-Desktop.ps1 -List`로 사용 가능한 검사를 확인한 뒤 격리된 환경에서 실행한다.
 
+`KoTrans2.exe --recording`은 시작 시에만 UI 캡처 제외를 해제한다. 실행 옵션 조합과 OCR 가림 보호는 [녹화 모드](recording-mode.md)를 참고한다.
+
 - [모델 준비](models.md) · [구성](architecture.md) · [개발 및 테스트 정책](branch-test-policy.md)
 - [정식 Publish와 설치](release.md) · [Portable ZIP](portable-release.md)

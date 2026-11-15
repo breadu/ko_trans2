@@ -56,7 +56,7 @@ internal static class OcrResultCacheTests
             options with {SuppressFurigana=false}, options with {SearchArea=new(0,0,60,30)}, options with {DetectionLongSide=1280},
             options with {KeepLocalParagraph=true},options with {EngineId="future-engine"},options with {ModelPresetId="other"},
             options with {UseDirectMl=true},options with {CollectMarkerDiagnostics=true},options with {CollectMarkerLearning=true},
-            options with {MarkerPatterns=[pattern]},options with {MarkerReference=new(80,40,[new("synthetic",.9f,new(4,4,48,12))])} };
+            options with {DialogueHint=new(80,40,[new(4,4,48,12),new(4,20,40,12)])},options with {MarkerPatterns=[pattern]},options with {MarkerReference=new(80,40,[new("synthetic",.9f,new(4,4,48,12))])} };
         foreach(var variant in variants) {var value=await Read(o:variant);Check(!value.ReusedFromCache && cache.LastMissReason==OcrCacheMissReason.ConditionsChanged,"Different OCR/learning condition reused stale evidence or wrong reason");}
         int before=engine.Calls;await Read(bypass:true);Check(engine.Calls==before+1 && engine.LastOptions!.BypassOcrCaches && cache.LastMissReason==OcrCacheMissReason.Bypassed,"Forced request used cache or bypass was not forwarded");
         using(var cts=new CancellationTokenSource()) {cts.Cancel();try {await Read(token:cts.Token);throw new Exception("Cancelled hit returned");}catch(OperationCanceledException){checks++;}}

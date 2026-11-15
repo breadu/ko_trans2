@@ -259,7 +259,7 @@
             </Canvas>
           </Grid>
           <WrapPanel x:Name="ProfileSaveActions" DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button Content="메인으로" Click="ReturnToLauncher" Style="{StaticResource UiButton}"/>
+            <Button Content="메인으로" Click="ReturnToLauncher" Style="{StaticResource UiButton}" Height="40"/>
             <Button x:Name="SaveSettingsButton" Click="SaveClicked" Style="{StaticResource UiPrimary}" Width="144" Height="40"
                     AutomationProperties.Name="설정 저장">
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -281,7 +281,7 @@
                       <TextBlock Text="프로필 이름" Style="{StaticResource SectionTitle}"/>
                       <TextBox x:Name="ProfileName" MaxLength="80" Style="{StaticResource UiInput}" AutomationProperties.Name="프로필 이름"/>
                     </StackPanel>
-                    <WrapPanel>
+                    <WrapPanel ItemHeight="44">
                       <Button x:Name="CreateProfileButton" Content="새로 만들기" Click="NewProfile" Style="{StaticResource UiButton}"/>
                       <Button x:Name="RenameProfileButton" Content="이름 변경" Click="RenameProfile" Style="{StaticResource UiButton}"/>
                       <Button x:Name="DeleteProfileButton" Content="삭제" Click="DeleteProfile" Style="{StaticResource UiButton}"/>
@@ -332,7 +332,7 @@
                      <TextBlock x:Name="TargetLabel" Text="창 모드에서는 실행 중인 창을 선택하세요."
                                Foreground="#C4D7E8" TextWrapping="Wrap" LineHeight="21" MaxHeight="42" TextTrimming="CharacterEllipsis"
                                ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Margin="0,6,0,12"/>
-                    <WrapPanel>
+                    <WrapPanel ItemHeight="44">
                       <Button x:Name="PickWindowButton" Content="대상 창 선택" Click="PickWindow" Style="{StaticResource UiButton}"/>
                       <Button x:Name="PickWindowDirectButton" Content="대상 창 직접 클릭"
                               Click="PickWindowDirect" Style="{StaticResource UiButton}"/>

@@ -31,7 +31,7 @@ function Read-SingleFileBundle([string]$Path) {
             }
             $entries[$name] = @{ Offset = $offset; Size = $size; Type = $type }
         }
-        foreach ($name in @('LibNMeCab.dll','LibNMeCab.IpaDicBin.dll','OpenCvSharpExtern.dll','onnxruntime.dll','DirectML.dll')) {
+        foreach ($name in @('Accessibility.dll','LibNMeCab.dll','LibNMeCab.IpaDicBin.dll','OpenCvSharpExtern.dll','onnxruntime.dll','DirectML.dll')) {
             if ($entries.ContainsKey($name)) { throw "Expected a separate library, not a bundled entry: $name" }
         }
         foreach ($name in @('KoTrans2.dll','System.Private.CoreLib.dll','PresentationFramework.dll','PresentationCore.dll','Microsoft.ML.OnnxRuntime.dll','OpenCvSharp.dll')) {

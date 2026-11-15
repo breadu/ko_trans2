@@ -122,6 +122,9 @@ public partial class MainWindow
             await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
             localStart.Token.ThrowIfCancellationRequested();
             if (closing || Current.Id != profile.Id || !ReferenceEquals(overlay, startingOverlay)) return false;
+            // Validate the dictionary before loading a model. Reuse this snapshot
+            // so the engine and its context belong to the same start attempt.
+            var preparedContext = PrepareProfileTranslationContext();
             if (profile.ShowTranslation && !App.MockAi && profile.Translation.Provider == TranslationProvider.HyMtLocal) {
                 var owner = startingOverlay.IsVisible && (!IsVisible || WindowState == WindowState.Minimized)
                     ? (Window)startingOverlay : this;
@@ -157,7 +160,7 @@ public partial class MainWindow
                 learning?.ObserveFrame(frame);
                 return frame;
             }
-            var active = CreateProfilePipeline(learning ?? ocr, ai, CaptureSource);
+            var active = CreateProfilePipeline(learning ?? ocr, ai, CaptureSource, preparedContext);
             ObserveTranslation(active, profile.Id, watch);
             if (!string.IsNullOrWhiteSpace(initialSource)) overlay?.SetResult(initialSource, initialTranslation ?? "", "");
             StartProfileMonitoring(active, watch, initialText: profile.ShowTranslation && string.IsNullOrWhiteSpace(initialTranslation) ? initialSource : null);
@@ -176,10 +179,9 @@ public partial class MainWindow
             if (ex is OcrInitializationException) ocrPresentationError = true;
             var reason = StartFailureMessage(ex, profile.ShowTranslation);
             if (ex is CaptureUnavailableException && profile.CaptureMode == CaptureMode.Window && target is null)
-                ReportTranslationStartFailure(reason, profile.GameWindow is null ? "대상 게임 창을 선택하세요" : "대상 게임 창을 찾지 못했어요",
-                    profile.GameWindow is null ? "프로필 설정 → 캡처 · OCR에서 선택하세요." : "게임 실행 후 캡처 · OCR에서 대상을 확인하세요.",
-                    "게임 창을 찾지 못했습니다. 캡처·OCR에서 대상 창을 확인하세요.");
-            else ReportTranslationStartFailure(reason, overlayReason: OverlayStartFailureMessage(ex, profile.ShowTranslation, profile.Translation.Provider));
+                ReportTranslationStartFailure(reason, profile.GameWindow is null ? "대상 게임 창을 선택하세요" : "대상 게임 창을 확인하세요",
+                    profile.GameWindow is null ? "프로필 설정 → 캡처 · OCR에서 선택하세요." : reason);
+            else ReportTranslationStartFailure(reason);
             return false;
         }
         finally {
@@ -189,29 +191,20 @@ public partial class MainWindow
             UpdateOcrExecution();
         }
     }
-    private void ReportTranslationStartFailure(string reason, string? title = null, string? detail = null, string? overlayReason = null)
+    private void ReportTranslationStartFailure(string reason, string? title = null, string? detail = null)
     {
         if (debugTelemetry is not null) {
             long session = debugTelemetry.BeginSession(Current.OcrOptions(), Current.Translation, TranslationPipeline.DefaultSettle.TotalMilliseconds);
             debugTelemetry.Record(session, DebugCode.SESSION_START_FAILED, DebugReason.Rejected,
                 v => v with { LastError = DebugReason.Rejected, TranslationState = DebugReason.Rejected });
         }
-        model.Status = reason; overlay?.SetResult(null, null, overlayReason ?? reason);
+        model.Status = reason; overlay?.SetResult(null, null, reason);
         ShowFeedback(FeedbackKind.Error, title ?? (Current.ShowTranslation ? "자동 번역을 시작하지 못했어요" : "원문 인식을 시작하지 못했어요"), detail ?? reason, replaceError: true);
         translationStartFeedback = FeedbackCount;
     }
     private string TranslationButtonCaption(bool running) => (ready && !Current.ShowTranslation ? "원문 인식 " : "번역 ") + (running ? "중지" : "시작");
     internal static string StartFailureMessage(Exception error, bool translate) => error is TranslationException or CaptureUnavailableException or InvalidDataException or OcrInitializationException
-        ? error.Message : translate ? "번역 준비 실패 · 모델과 설정을 확인하세요." : "원문 인식 준비 실패 · OCR 모델과 캡처 설정을 확인하세요.";
-    private static string OverlayStartFailureMessage(Exception error, bool translate, TranslationProvider provider)
-    {
-        if (error is OcrInitializationException) return "OCR 모델을 불러오지 못했습니다. 모델 파일을 확인하세요.";
-        if (error is CaptureUnavailableException) return "게임 화면을 확인하지 못했습니다. 대상 창과 인식 영역을 확인하세요.";
-        if (error is TranslationException && provider == TranslationProvider.HyMtLocal)
-            return "로컬 AI 모델을 준비하지 못했습니다. 설치 상태와 메모리를 확인하세요.";
-        if (error is TranslationException) return "번역 서비스를 준비하지 못했습니다. 번역 서비스 설정을 확인하세요.";
-        return translate ? "번역 준비에 실패했습니다. 모델과 설정을 확인하세요." : "원문 인식 준비에 실패했습니다. OCR 모델과 캡처 설정을 확인하세요.";
-    }
+        ? error.Message : translate ? "번역 준비 중 오류가 발생했습니다. 다시 시작해 주세요." : "원문 인식 준비 중 오류가 발생했습니다. 다시 시작해 주세요.";
     internal void StartProfileMonitoring(TranslationPipeline active, bool continuous, Action<RecognitionInputPlan>? startInput = null, string? initialText = null)
     {
         var plan = RecognitionInputPlan.For(Current, continuous);
@@ -223,7 +216,7 @@ public partial class MainWindow
     internal async Task RequestInputTriggerAsync()
     {
         if (!automatic || !RecognitionInputPlan.For(Current, true).UseTriggers) return;
-        overlay?.DismissTriggerPrompt();
+        overlay?.DismissInputPrompt();
         var request = ++triggerGeneration; var active = pipeline;
         await Task.Delay(Current.TriggerDelayMs); // Allow the game to draw, without intercepting its input.
         if (!closing && automatic && request == triggerGeneration && active is not null && active == pipeline
@@ -245,7 +238,8 @@ public partial class MainWindow
         string? warning = null;
         var warningArea = PipelineStatusArea.Input;
         FirstRunWizard?.Controller.Bind(active,profileId);
-        overlay?.BeginSession(RecognitionInputPlan.For(Current, watch).UseTriggers);
+        var inputPlan = RecognitionInputPlan.For(Current, watch);
+        overlay?.BeginSession(inputPlan.UseTriggers, inputPlan.WatchClipboard);
         active.ActivityChanged += (version, busy) => Dispatcher.BeginInvoke(() =>
         {
             if (pipeline != active || version != active.Version || Current.Id != profileId || closing) return;
@@ -289,13 +283,15 @@ public partial class MainWindow
                 + $" · AI {update.ApiMs:F0} / 전체 {update.TotalMs:F0} ms";
         });
     }
-    private void EnsureCaptureSafe(PixelRect bounds,CaptureCover? presentationCover=null)
+    internal void EnsureCaptureSafe(PixelRect bounds,CaptureCover? presentationCover=null)
     {
         // Only a presenter bound to the validated foreground game supplies this override.
         // Its visible image, rather than the smaller hidden original client, covers app windows below it.
         var cover = presentationCover ?? WindowTargets.ForegroundCaptureCover();
+        var managedHandles = App.RecordingMode ? new HashSet<IntPtr>() : null;
         foreach (Window window in System.Windows.Application.Current.Windows)
         {
+            managedHandles?.Add(new WindowInteropHelper(window).Handle);
             if (!NeedsCaptureOverlapCheck(window.IsVisible, window.WindowState == WindowState.Minimized, window == qaFixture,
                 window == overlay && overlay.CaptureExcluded || window == study && study.CaptureExcluded || window is OverlayChromeWindow { CaptureExcluded: true }
                 || window is FirstRunWizardWindow {CaptureExcluded:true} || DebugOverlayWindow.ExcludedForCapture(window))) continue;
@@ -304,10 +300,20 @@ public partial class MainWindow
             bool above = cover is not null && state.Bounds is { } area && WindowTargets.Overlaps(area, bounds)
                 && WindowTargets.IsAbove(cover.Handle, handle);
             if (WindowTargets.BlocksCapture(state, bounds, cover?.Bounds, above))
-                throw new CaptureUnavailableException(CaptureOverlapMessage(window == this ? "설정창" : window == overlay ? "번역창" : window == study ? "학습창" : window is FirstRunWizardWindow ? "처음 사용하기 안내 창" : "추가 설정창"), CaptureWaitReason.Occluded);
+                throw new CaptureUnavailableException(CaptureOverlapMessage(window == this ? "설정창" : window == overlay ? "번역창" : window == study ? "학습창" : window is OverlayChromeWindow ? "자막 조작창" : window is FirstRunWizardWindow ? "처음 사용하기 안내 창" : "추가 설정창"), CaptureWaitReason.Occluded);
+        }
+        // Recording also exposes transient native popups outside the managed window list.
+        if (managedHandles is not null) foreach (var handle in WindowTargets.CurrentProcessWindows()) {
+            if (managedHandles.Contains(handle)) continue;
+            var state = WindowTargets.CaptureState(handle);
+            bool above = cover is not null && WindowTargets.IsAbove(cover.Handle, handle);
+            if (WindowTargets.BlocksCapture(state, bounds, cover?.Bounds, above))
+                throw new CaptureUnavailableException(CaptureOverlapMessage("팝업 창"), CaptureWaitReason.Occluded);
         }
     }
-    internal static string CaptureOverlapMessage(string windowName) => $"KO Trans 2 {windowName}이 캡처 영역을 가립니다. 해당 창을 숨기거나 최소화하거나, 게임 창을 앞으로 가져오세요.";
+    internal static string CaptureOverlapMessage(string windowName) => $"KO Trans 2 {windowName}이 캡처 영역을 가립니다. "
+        + (App.RecordingMode ? "녹화 모드에서는 자막도 캡처됩니다. 해당 창을 인식 영역 밖으로 옮기거나 숨긴 뒤 다시 확인하세요."
+            : "해당 창을 숨기거나 최소화하거나, 게임 창을 앞으로 가져오세요.");
     internal static bool NeedsCaptureOverlapCheck(bool visible, bool minimized, bool fixture, bool captureExcluded)
         => visible && !minimized && !fixture && !captureExcluded;
     private async Task ToggleTranslationAsync()

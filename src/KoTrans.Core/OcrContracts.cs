@@ -1,7 +1,7 @@
 namespace KoTrans.Core;
 
 public enum OcrState { NotConfigured, Loading, Ready, Failed }
-public sealed record OcrOptions(string Language, string ReadingMode, bool Vertical, bool SuppressFurigana = true, PixelRect? SearchArea = null, int DetectionLongSide = 0, bool KeepLocalParagraph = false, string EngineId = "paddle", string ModelPresetId = "default", bool UseDirectMl = false, bool CollectMarkerDiagnostics = false, IReadOnlyList<GameMarkerPattern>? MarkerPatterns = null,bool CollectMarkerLearning=false,TerminalMarkerReference? MarkerReference=null,bool BypassOcrCaches=false);
+public sealed record OcrOptions(string Language, string ReadingMode, bool Vertical, bool SuppressFurigana = true, PixelRect? SearchArea = null, int DetectionLongSide = 0, bool KeepLocalParagraph = false, string EngineId = "paddle", string ModelPresetId = "default", bool UseDirectMl = false, bool CollectMarkerDiagnostics = false, IReadOnlyList<GameMarkerPattern>? MarkerPatterns = null,bool CollectMarkerLearning=false,TerminalMarkerReference? MarkerReference=null,bool BypassOcrCaches=false,DialogueLayoutHint? DialogueHint=null);
 public sealed record OcrLine(string Text, float Confidence, PixelRect Bounds, bool Vertical = false, int Paragraph = 0);
 public sealed record OcrPadding(int Left, int Top, int Right, int Bottom);
 public sealed record OcrAttemptCounts(int Gpu, int Cpu);
@@ -9,6 +9,7 @@ public sealed record OcrCharacter(string Text, float Confidence, PixelRect Bound
 public sealed record OcrResult(IReadOnlyList<OcrLine> Lines, TimeSpan InferenceTime)
 {
     public bool ReusedFromCache { get; init; }
+    public bool DialogueHintUsed { get; init; }
     public OcrRecognitionCacheStats? RecognitionCache {get;init;}
     public OcrAttemptCounts? Attempts { get; init; }
     public IReadOnlyList<OcrMarkerObservation>? MarkerDiagnostics { get; init; }

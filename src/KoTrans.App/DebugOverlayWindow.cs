@@ -41,7 +41,12 @@ internal sealed class DebugOverlayWindow : Window
         var root = new DockPanel { Margin = new Thickness(12) };
         var toolbar = new WrapPanel(); DockPanel.SetDock(toolbar, Dock.Top); root.Children.Add(toolbar);
         var save = new Button { Name = "DebugSave", Content = "진단 저장" }; var close = new Button { Name = "DebugClose", Content = "닫기" };
-        toolbar.Children.Add(save); toolbar.Children.Add(pause); toolbar.Children.Add(close); toolbar.Children.Add(activity);
+        foreach (var button in new[] { save, pause, close })
+        {
+            button.Height = 36;
+            toolbar.Children.Add(button);
+        }
+        toolbar.Children.Add(activity);
         var notices = new StackPanel(); notices.Children.Add(exclusionWarning); notices.Children.Add(status); notices.Children.Add(folder); DockPanel.SetDock(notices, Dock.Bottom); root.Children.Add(notices);
         var body = new StackPanel(); body.Children.Add(Section("CAPTURE", capture)); body.Children.Add(Section("FRAME GATE", gate));
         ocrGroup = Group("DebugOcrGroup", ocrSummary, ocr, state.OcrExpanded);
@@ -81,9 +86,9 @@ internal sealed class DebugOverlayWindow : Window
     internal void SetCaptureExclusion(bool success)
     {
         CaptureExcluded = success;
-        telemetry.SetContext(v => v with { Exclusion = CaptureExclusionPolicy.DebugCaptureEnabled ? DebugReason.NotMeasured
+        telemetry.SetContext(v => v with { Exclusion = CaptureExclusionPolicy.UiCaptureEnabled ? DebugReason.NotMeasured
             : success ? DebugReason.Excluded : DebugReason.ExclusionFailed });
-        exclusionWarning.Text = success || CaptureExclusionPolicy.DebugCaptureEnabled ? ""
+        exclusionWarning.Text = success || CaptureExclusionPolicy.UiCaptureEnabled ? ""
             : "캡처 제외 실패 · 디버그 창을 캡처 영역 밖으로 이동하세요.";
     }
     internal void SetPaused(bool value) { paused = value; pause.Content = value ? "재개" : "일시정지"; activity.Text = value ? "PAUSED" : "RUNNING"; if (!value) SafeRefresh(); }

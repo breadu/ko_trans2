@@ -82,7 +82,7 @@ public sealed class LocalModelRuntime : ILocalModelRuntime, IAsyncDisposable
                     await StopProcessAsync().ConfigureAwait(false);
                 }
             }
-            throw new TranslationException("이 PC에서 로컬 번역을 준비하지 못했습니다. 메모리와 그래픽 드라이버 상태를 확인한 뒤 다시 시도해 주세요.");
+            throw new TranslationException("로컬 번역 엔진을 시작하지 못했습니다. 프로그램을 다시 시작하고, 계속 실패하면 로컬 AI 진단 기록을 확인해 주세요.");
         }
         catch { await StopWorkerAsync().ConfigureAwait(false); throw; }
     }
@@ -118,7 +118,7 @@ public sealed class LocalModelRuntime : ILocalModelRuntime, IAsyncDisposable
             var reply = await ReadAsync(token).ConfigureAwait(false);
             if (reply.Id != id) throw new IOException("Local response generation mismatch.");
             if (reply.Error == "input_limit") throw new LocalTranslationLimitException(LocalTranslationLimit.Input);
-            if (reply.Error is not null) throw new TranslationException("로컬 번역 중 오류가 발생했습니다. 원문 길이를 줄이거나 다시 시작해 주세요.");
+            if (reply.Error is not null) throw new TranslationException("로컬 번역 실행 중 오류가 발생했습니다. 번역을 중지한 뒤 다시 시작해 주세요.");
             if (reply.Stop == "limit") throw new LocalTranslationLimitException(LocalTranslationLimit.Output);
             if (reply.Stop != "EOG") throw new TranslationException("로컬 번역 결과를 확인할 수 없습니다. 다시 시도해 주세요.");
             if (string.IsNullOrWhiteSpace(reply.Text) || reply.Text.Contains("<|", StringComparison.Ordinal))

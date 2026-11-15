@@ -41,14 +41,14 @@ public sealed class DictionaryConnection : IDisposable
             do
             {
                 part = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), token);
-                if (part.MessageType == WebSocketMessageType.Close) throw new IOException("사전 창과의 연결이 종료되었습니다. 다시 단어를 클릭해 주세요.");
+                if (part.MessageType == WebSocketMessageType.Close) throw new DictionaryBrowserException("사전 창과의 연결이 종료되었습니다. 다시 단어를 클릭해 주세요.");
                 message.Write(buffer, 0, part.Count);
-                if (message.Length > 4 * 1024 * 1024) throw new IOException("사전 브라우저 응답이 너무 큽니다.");
+                if (message.Length > 4 * 1024 * 1024) throw new DictionaryBrowserException("사전 브라우저 응답이 너무 큽니다.");
             } while (!part.EndOfMessage);
             using var json = JsonDocument.Parse(message.ToArray());
             var root = json.RootElement;
             if (!root.TryGetProperty("id", out var responseId) || responseId.GetInt32() != id) continue;
-            if (root.TryGetProperty("error", out var error)) throw new IOException("사전 브라우저: " + error.GetProperty("message").GetString());
+            if (root.TryGetProperty("error", out _)) throw new DictionaryBrowserException("사전 브라우저가 요청을 처리하지 못했습니다. 사전 창을 닫은 뒤 다시 단어를 클릭해 주세요.");
             return root.GetProperty("result").Clone();
         }
     }

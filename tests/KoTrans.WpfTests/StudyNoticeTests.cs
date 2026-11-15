@@ -13,6 +13,36 @@ namespace KoTrans.WpfTests;
 
 internal static class StudyNoticeTests
 {
+    internal static void EmptySourceCard()
+    {
+        var reader = Track(new StudyWindow(new AppSettings(), resolveVoiceDirectory: () => null));
+        try {
+            var source = Named<Border>(reader, "StudySourcePanel");
+            var feedback = Named<TextBlock>(reader, "StudyFeedback");
+            Check(source.Visibility == Visibility.Collapsed, "New reader showed an empty source card");
+            reader.ShowNotice("원문 언어 또는 읽기 설정이 변경되어 이전 문장 해설을 비웠습니다");
+            Layout(reader, 500, 600);
+            Check(source.Visibility == Visibility.Collapsed && source.DesiredSize.Height == 0
+                && feedback.Visibility == Visibility.Visible, "Notice-only reader reserved space for an empty source card");
+            reader.SetSource(" \r\n\t"); reader.ShowError("원문을 가져오지 못했습니다."); reader.FinishBusy();
+            Check(source.Visibility == Visibility.Collapsed && feedback.Visibility == Visibility.Visible,
+                "Whitespace-only error showed an empty source card or hid the error");
+            reader.SetSource("A new sentence.", "en"); reader.SetBusy(true, "synthetic request");
+            Check(source.Visibility == Visibility.Visible && Named<TextBlock>(reader, "StudyOriginalText").Text == reader.Input,
+                "New source did not restore its card while loading");
+            reader.ShowError("해설을 가져오지 못했습니다."); reader.FinishBusy();
+            Check(source.Visibility == Visibility.Visible && feedback.Visibility == Visibility.Visible,
+                "Explanation failure hid the available source");
+            reader.SetSource(""); reader.Clear(); reader.ShowNotice("원문을 다시 가져와 주세요.");
+            Check(source.Visibility == Visibility.Collapsed && feedback.Visibility == Visibility.Visible,
+                "Clearing the source left its card behind");
+            reader.SetSource("Another sentence.", "en"); reader.Render(WpfTests.Example()); reader.FinishBusy();
+            Layout(reader, 500, 600);
+            Check(source.Visibility == Visibility.Visible && source.DesiredSize.Height > 0
+                && feedback.Visibility == Visibility.Collapsed, "New explanation did not restore the source card and replace the notice");
+        } finally { Complete(reader.CloseForExitAsync()); }
+    }
+
     internal static void SettingsInvalidation()
     {
         string directory = FeedbackTests.DirectoryPath(); var settings = new AppSettings(); settings.Validate();
@@ -54,6 +84,8 @@ internal static class StudyNoticeTests
                 "Provider change left a blank reader without the reason, service/model or actual configured shortcut");
             Check(reader.Input == "" && !Text(reader).Contains("Previous English source.") && !Text(reader).Contains("journey")
                 && !reader.IsLoadingAnimationRunning, "Provider change left previous data or spinner behind");
+            Check(Named<Border>(reader, "StudySourcePanel").Visibility == Visibility.Collapsed,
+                "Settings invalidation left an empty source card behind");
             Check(feedback.Foreground is SolidColorBrush brush && brush.Color == Color.FromRgb(0xA5, 0xBC, 0xD1),
                 "Normal settings invalidation was incorrectly styled as a service error");
             string providerNotice = feedback.Text;
@@ -72,6 +104,8 @@ internal static class StudyNoticeTests
             Check(feedback.Text.Contains("가져오는 중") && !feedback.Text.Contains("비웠습니다"), "Starting a new request retained old guidance");
             reader.SetSource("Next source.", "en"); reader.Render(WpfTests.Example("새로운 해석")); reader.FinishBusy();
             Check(feedback.Visibility == Visibility.Collapsed && Text(reader).Contains("새로운 해석"), "New result did not replace the settings notice");
+            Check(Named<Border>(reader, "StudySourcePanel").Visibility == Visibility.Visible,
+                "New result after settings invalidation did not restore its source card");
             save = main.SwitchProfileAsync(other); Complete(save);
             Check(save.Result && feedback.Visibility == Visibility.Visible && feedback.Text.Contains("프로필이 변경되어"),
                 "Profile switch left an unexplained blank study reader");

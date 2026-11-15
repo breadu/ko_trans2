@@ -21,6 +21,7 @@ internal static class LocalWorkerFixture
                     if (request.Prompt == "CRASH") Environment.Exit(17);
                     if (request.Prompt == "INPUT_LIMIT") { await Reply(new(request.Id, Error: "input_limit")); return; }
                     if (request.Prompt == "OUTPUT_LIMIT") { await Reply(new(request.Id, Text: "잘린 번역은 표시하면 안 됨", Stop: "limit")); return; }
+                    if (request.Prompt == "INFERENCE_ERROR") { await Reply(new(request.Id, Error: "inference")); return; }
                     if (request.Prompt == "SLOW") { Console.Error.WriteLine("slow-start"); await Task.Delay(10000, token); }
                     await Reply(new(request.Id, Text: "모의 번역 " + Environment.ProcessId, Stop: "EOG"));
                 } catch (OperationCanceledException) { await Reply(new(request.Id, Error: "cancelled")); }

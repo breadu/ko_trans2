@@ -129,6 +129,58 @@ internal static class GameQaTests
         var recorder = new GameQaRecorder(); var id = recorder.Begin(Frame(), new("ja", "NVL", true, false), GameQaProfile.From(new()));
         recorder.Complete(id, Result() with { Models = identity }, "日本語", false); var snapshot = recorder.Snapshot!;
         Check(snapshot.Record.AlgorithmVersion == OcrAlgorithmRevision.Current, "QA omitted algorithm revision");
+        var v24 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v24-shared-dialogue-region-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v24-shared-dialogue-region-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v24, models)));
+        Check(GameQaReplay.Prepare(v24, models, useCurrentAlgorithm: true) is not null, "Explicit v24 comparison rejected");
+        var v23 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v23-dialogue-baseline-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v23-dialogue-baseline-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v23, models)));
+        Check(GameQaReplay.Prepare(v23, models, useCurrentAlgorithm: true) is not null, "Explicit v23 comparison rejected");
+        var v22 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v22-dialogue-region-first-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v22-dialogue-region-first-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v22, models)));
+        Check(GameQaReplay.Prepare(v22, models, useCurrentAlgorithm: true) is not null, "Explicit v22 comparison rejected");
+        var v21 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v21-nested-pixel-evidence-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v21-nested-pixel-evidence-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v21, models)));
+        Check(GameQaReplay.Prepare(v21, models, useCurrentAlgorithm: true) is not null, "Explicit v21 comparison rejected");
+        var v20 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v20-nested-fragment-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v20-nested-fragment-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v20, models)));
+        Check(GameQaReplay.Prepare(v20, models, useCurrentAlgorithm: true) is not null, "Explicit v20 comparison rejected");
+        var v19 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v19-touching-row-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v19-touching-row-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v19, models)));
+        Check(GameQaReplay.Prepare(v19, models, useCurrentAlgorithm: true) is not null, "Explicit v19 comparison rejected");
+        var v18 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v18-dialogue-ink-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v18-dialogue-ink-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v18, models)));
+        Check(GameQaReplay.Prepare(v18, models, useCurrentAlgorithm: true) is not null, "Explicit v18 comparison rejected");
+        var v17 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v17-confirmed-row-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v17-confirmed-row-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v17, models)));
+        Check(GameQaReplay.Prepare(v17, models, useCurrentAlgorithm: true) is not null, "Explicit v17 comparison rejected");
+        var v16 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v16-dialogue-row-recovery-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v16-dialogue-row-recovery-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v16, models)));
+        Check(GameQaReplay.Prepare(v16, models, useCurrentAlgorithm: true) is not null, "Explicit v16 comparison rejected");
+        var v15 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v15-overlapping-row-20261115",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v15-overlapping-row-20261115" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v15, models)));
+        Check(GameQaReplay.Prepare(v15, models, useCurrentAlgorithm: true) is not null, "Explicit v15 comparison rejected");
+        var v14 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v14-recognized-ruby-20261114",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v14-recognized-ruby-20261114" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v14, models)));
+        Check(GameQaReplay.Prepare(v14, models, useCurrentAlgorithm: true) is not null, "Explicit v14 comparison rejected");
+        var v13 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v13-static-label-recovery-20261114",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v13-static-label-recovery-20261114" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v13, models)));
+        Check(GameQaReplay.Prepare(v13, models, useCurrentAlgorithm: true) is not null, "Explicit v13 comparison rejected");
+        var v12 = snapshot with { Record = snapshot.Record with { AlgorithmVersion = "ocr-layout-v12-terminal-marker-tracking-20261106",
+            Ocr = snapshot.Record.Ocr! with { Models = identity with { ImplementationVersion = "ocr-layout-v12-terminal-marker-tracking-20261106" } } } };
+        await Reject(() => Task.FromResult(GameQaReplay.Prepare(v12, models)));
+        Check(GameQaReplay.Prepare(v12, models, useCurrentAlgorithm: true) is not null, "Explicit previous layout comparison rejected");
         var v5=snapshot with {Record=snapshot.Record with {AlgorithmVersion="ocr-layout-v5-20261030",Ocr=snapshot.Record.Ocr! with {Models=identity with {ImplementationVersion="ocr-layout-v5-20261030"}}}};
         var v6=snapshot with {Record=snapshot.Record with {AlgorithmVersion="ocr-layout-v6-20261031",Ocr=snapshot.Record.Ocr! with {Models=identity with {ImplementationVersion="ocr-layout-v6-20261031",FlushDenormalsToZero=false}}}};
         await Reject(()=>Task.FromResult(GameQaReplay.Prepare(v6,models)));

@@ -76,7 +76,7 @@ internal static class SubtitleDisplayModeTests
             active.SubmitClipboard("Failed source.", manual: true);
             Until(() => translator.Calls == 1, "AI fixture did not start");
             translator.Pending.SetException(new TranslationException("synthetic AI detail"));
-            Until(() => notice.Text.Contains("AI 서비스 요청에 실패"), "AI failure did not reach the overlay");
+            Until(() => notice.Text == "synthetic AI detail", "AI failure did not reach the overlay");
             string failure = notice.Text;
             translator.Pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
             Complete(main.CycleSubtitleDisplayAsync()); // translation -> both; same pipeline and cached translation

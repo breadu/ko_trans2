@@ -179,6 +179,12 @@ internal static class FirstRunWizardTests
             wizard.SetCaptureExclusion(false);Check(Named<TextBlock>(wizard,"WizardCaptureWarning").Text.Contains("최소화"),"Missing capture exclusion fallback guidance");
             wizard.SetCaptureExclusion(true);Check(Named<TextBlock>(wizard,"WizardCaptureWarning").Text=="","Capture warning remained after exclusion succeeded");
             Layout(wizard,wizard.Width-16,wizard.Height-38);
+            var footerButtons = new[] { wizard.Next, wizard.Previous, Named<Button>(wizard, "WizardRetry"), Named<Button>(wizard, "WizardCancel") };
+            var footer = (UIElement)wizard.Next.Parent;
+            Check(footerButtons.All(button => button.ActualHeight == wizard.Next.ActualHeight
+                && Math.Abs(button.TranslatePoint(new Point(), footer).Y - wizard.Next.TranslatePoint(new Point(), footer).Y) < .1)
+                && wizard.Next.ActualWidth > wizard.Previous.ActualWidth,
+                "Default wizard actions must fit one row with content-sized widths and matching heights");
             var initialScroll=Named<ScrollViewer>(wizard,"WizardBody");
             Check(initialScroll.ScrollableHeight<.5 && initialScroll.ComputedVerticalScrollBarVisibility!=Visibility.Visible,
                 $"Initial wizard needs scrolling: extent={initialScroll.ExtentHeight}, viewport={initialScroll.ViewportHeight}");
@@ -188,7 +194,15 @@ internal static class FirstRunWizardTests
             wizard.Previous.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));Complete(wizard.PendingAction);
             foreach(var size in new[]{new Size(490,595),new Size(340,520),new Size(300,380)}) {
                 wizard.ApplyAvailableSize(size);Layout(wizard,size.Width,size.Height);
-                Check(wizard.Next.ActualWidth>0 && wizard.Previous.ActualWidth>0,"Narrow wizard lost navigation");
+                var actions = new[] { wizard.Next, wizard.Previous, Named<Button>(wizard, "WizardRetry"), Named<Button>(wizard, "WizardCancel") };
+                var wizardContent = (UIElement)wizard.Content;
+                Check(wizard.Next.ActualWidth > 0 && actions.All(button =>
+                {
+                    var origin = button.TranslatePoint(new Point(), wizardContent);
+                    return button.ActualHeight == wizard.Next.ActualHeight
+                        && origin.X >= 0 && origin.X + button.ActualWidth <= size.Width
+                        && origin.Y >= 0 && origin.Y + button.ActualHeight <= size.Height;
+                }), "Narrow wizard action heights differ or overflow the window");
             }
             main.ShowLauncher();main.WindowState=WindowState.Minimized;
             Click(wizard,"WizardCreateProfile");

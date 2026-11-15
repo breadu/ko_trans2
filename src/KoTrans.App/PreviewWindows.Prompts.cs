@@ -2,18 +2,18 @@ namespace KoTrans.App;
 
 internal sealed partial class TranslationWindow
 {
-    private enum IdlePrompt { None, Trigger, Stopped, Preparing }
+    private enum IdlePrompt { None, Trigger, Clipboard, Stopped, Preparing }
     private IdlePrompt prompt;
     private readonly TextBlock instruction = new() { Name = "OverlayInstruction", TextWrapping = TextWrapping.Wrap,
         Margin = new Thickness(0, 10, 0, 0), Visibility = Visibility.Collapsed, IsHitTestVisible = false };
-    internal void BeginSession(bool waitForTrigger)
+    internal void BeginSession(bool waitForTrigger, bool waitForClipboard = false)
     {
         ClearPipelineNotices(); pipelineVersion = -1;
         reusableTranslation = "";
         reusableSource = "";
         original.SetSource("", profile.Language == "일본어" ? "ja" : "en"); translation.Text = "";
         ShowNotice("");
-        prompt = waitForTrigger ? IdlePrompt.Trigger : IdlePrompt.None;
+        prompt = waitForClipboard ? IdlePrompt.Clipboard : waitForTrigger ? IdlePrompt.Trigger : IdlePrompt.None;
         RefreshInstructionStyle(); ApplyContentVisibility();
     }
     internal void ShowStoppedPrompt()
@@ -36,7 +36,7 @@ internal sealed partial class TranslationWindow
         RefreshInstructionStyle(); ApplyContentVisibility();
     }
     internal void FinishPreparingPrompt() { if (prompt == IdlePrompt.Preparing) ShowStoppedPrompt(); }
-    internal void DismissTriggerPrompt() { if (prompt == IdlePrompt.Trigger) ClearIdlePrompt(); }
+    internal void DismissInputPrompt() { if (prompt is IdlePrompt.Trigger or IdlePrompt.Clipboard) ClearIdlePrompt(); }
     private void ClearIdlePrompt()
     {
         if (prompt == IdlePrompt.None) return;
@@ -47,6 +47,7 @@ internal sealed partial class TranslationWindow
         instruction.FontSize = profile.OverlayFontSize; instruction.Foreground = translation.Foreground;
         string action = profile.ShowTranslation ? "번역" : "원문 인식";
         instruction.Text = prompt == IdlePrompt.Preparing ? $"{action} 준비 중…"
+            : prompt == IdlePrompt.Clipboard ? "클립보드의 데이터를 기다리고 있습니다"
             : prompt == IdlePrompt.Trigger ? "게임에서 지정한 키나 버튼을 누르면 대사를 인식합니다."
             : $"자막창의 ‘시작’ 버튼을 누르면 {action}을 시작합니다.";
     }

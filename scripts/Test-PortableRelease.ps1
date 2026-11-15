@@ -32,10 +32,12 @@ if ($metadata.layout -ceq 'managed-bundle') {
     $withoutLayout | ConvertTo-Json | Set-Content -LiteralPath $layoutRecord
     try { Reject { & "$PSScriptRoot/Test-ReleasePackage.ps1" -Path $extracted -Portable } }
     finally { [IO.File]::WriteAllBytes($layoutRecord, $originalRecord) }
-    $loose = Join-Path $extracted 'LibNMeCab.dll'
-    [IO.File]::Move($loose, $loose+'.held')
-    try { Reject { & "$PSScriptRoot/Test-ReleasePackage.ps1" -Path $extracted -Portable } }
-    finally { [IO.File]::Move($loose+'.held', $loose) }
+    foreach ($name in @('Accessibility.dll','LibNMeCab.dll')) {
+        $loose = Join-Path $extracted $name
+        [IO.File]::Move($loose, $loose+'.held')
+        try { Reject { & "$PSScriptRoot/Test-ReleasePackage.ps1" -Path $extracted -Portable } }
+        finally { [IO.File]::Move($loose+'.held', $loose) }
+    }
 }
 Check ((Test-Path -LiteralPath "$extracted/KoTrans2.exe") -and (Test-Path -LiteralPath "$extracted/local-worker/KoTrans.LocalWorker.exe") -and (Test-Path -LiteralPath "$extracted/local-worker/runtimes/win-x64/native/vulkan/ggml-vulkan.dll")) 'Extracted folder lacks native/worker files.'
 # Modify only our extracted fixture. Never modify the validated input folder.

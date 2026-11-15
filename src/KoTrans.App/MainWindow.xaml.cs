@@ -448,7 +448,10 @@ public partial class MainWindow : Window
         var profile = Current; var window = new TranslationWindow(profile,
             openDictionary: (uri, owner, token) => OpenDictionaryForProfileAsync(profile, uri, owner, token),
             getGameWindow: () => !closing && Current.Id == profile.Id ? target : null); overlay = window;
-        if (pipeline?.IsRunning == true) window.BeginSession(RecognitionInputPlan.For(Current, automatic).UseTriggers);
+        if (pipeline?.IsRunning == true) {
+            var plan = RecognitionInputPlan.For(Current, automatic);
+            window.BeginSession(plan.UseTriggers, plan.WatchClipboard);
+        }
         window.SetResult(OcrText.Text, TranslatedText.Text, "");
         if (lastOverlayUpdate is { } update) window.SetPipelineResult(update);
         if (pipeline?.IsRunning != true) window.ShowStoppedPrompt();

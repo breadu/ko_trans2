@@ -80,16 +80,24 @@ internal static class RecognitionModeTests
                     && statusUpdates.Any(u => u.State == PipelineState.Watching && u.Message == (plan.WatchScreen ? "새 원문 대기 중…" : "입력 대기 중")),
                     "Original-only start displayed translation progress or missed its mode-specific waiting state");
                 var instruction = Named<TextBlock>(overlay, "OverlayInstruction");
-                Check((instruction.Visibility == Visibility.Visible) == plan.UseTriggers,
-                    "First-trigger instruction does not match the production recognition plan");
+                Check((instruction.Visibility == Visibility.Visible) == (plan.UseTriggers || plan.WatchClipboard),
+                    "Initial input instruction does not match the production recognition plan");
                 Check(inputStarts == 1 && (plan.WatchScreen ? 1 : 0) + (plan.UseTriggers ? 1 : 0) + (plan.WatchClipboard ? 1 : 0) <= 1,
                     "Production start requested overlapping screen/input/clipboard monitors");
                 if (mode == CaptureMode.Clipboard) {
                     Check(plan.WatchClipboard && !plan.UseTriggers && !plan.WatchScreen, "Clipboard depends on screen/trigger preferences");
                     Complete(main.RequestInputTriggerAsync()); Complete(Task.Delay(70));
                     Check(captures == 0 && engine.Calls == 0, "Clipboard game trigger captured the screen");
+                    Check(instruction.Text == "클립보드의 데이터를 기다리고 있습니다", "Clipboard startup showed trigger guidance");
+                    pipeline.SubmitClipboard(""); Complete(Task.Delay(30));
+                    Check(instruction.Visibility == Visibility.Visible, "Empty clipboard dismissed initial waiting guidance");
                     pipeline.SubmitClipboard("Synthetic clipboard dialogue.");
                     Until(() => Named<TextBox>(main, "OcrText").Text.Contains("clipboard"), "Clipboard event wasn't processed independently");
+                    Check(instruction.Visibility == Visibility.Collapsed, "First clipboard result did not clear initial instruction");
+                    pipeline.SubmitClipboard("Next copied dialogue.");
+                    Until(() => Named<TextBox>(main, "OcrText").Text.Contains("Next copied"), "Later clipboard event was not processed");
+                    Check(instruction.Visibility == Visibility.Collapsed && captures == 0 && engine.Calls == 0,
+                        "Clipboard instruction returned for a later input or started screen OCR");
                 } else if (watch) {
                     Check(plan.WatchScreen && !plan.UseTriggers, "Auto mode registered input triggers");
                     Until(() => pipeline.TryGetRecognized(current, out _), "Auto mode didn't recognize a stable synthetic screen");

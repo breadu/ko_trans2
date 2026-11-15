@@ -59,6 +59,7 @@ internal static class LocalModelManagementUiTests
                 Check(Math.Abs(yes.TranslatePoint(new Point(), (UIElement)prompt.Content).Y - no.TranslatePoint(new Point(), (UIElement)prompt.Content).Y) < .1,
                     "Confirmation Yes/No buttons are vertically misaligned");
             }
+            CheckPreparationActions(progress);
             Check(confirmation.Topmost && deletion.Topmost && progress.Topmost, "Local dialogs can hide behind a game");
             Check(Named<Button>(deletion, "ConfirmLocalNo").IsDefault, "Delete confirmation does not default to No");
             var provider = Named<ComboBox>(window, "Provider"); var action = Named<Button>(window, "LocalModelAction");
@@ -120,5 +121,30 @@ internal static class LocalModelManagementUiTests
             } finally { download.Wait?.TrySetResult(); Close(pendingWindow); }
         }
         finally { Close(overlay); Close(overlay.Chrome); Close(progress); Close(confirmation); Close(deletion); Close(window); Close(main); Directory.Delete(root, true); }
+    }
+
+    private static void CheckPreparationActions(LocalPreparationWindow progress)
+    {
+        Layout(progress, 426, 220);
+        var dismiss = Button(progress, "취소");
+        var originalSize = dismiss.RenderSize;
+        var choice = progress.RetryAsync("테스트 모델을 준비하지 못했습니다.");
+        Layout(progress, 426, 220);
+        var retry = Button(progress, "다시 시도");
+        var footer = (UIElement)retry.Parent;
+        Check(dismiss.Content as string == "닫기" && originalSize.Width > 0 && originalSize.Height > 0
+            && dismiss.RenderSize == originalSize && retry.ActualHeight == dismiss.ActualHeight
+            && retry.ActualWidth > dismiss.ActualWidth
+            && retry.TranslatePoint(new Point(), footer).Y == dismiss.TranslatePoint(new Point(), footer).Y,
+            "Local preparation buttons must fit their labels with matching heights and vertical alignment");
+        var caption = new System.Windows.Media.FormattedText((string)retry.Content,
+            System.Globalization.CultureInfo.GetCultureInfo("ko-KR"), retry.FlowDirection,
+            new System.Windows.Media.Typeface(retry.FontFamily, retry.FontStyle, retry.FontWeight, retry.FontStretch),
+            retry.FontSize, System.Windows.Media.Brushes.White, 1);
+        Check(caption.WidthIncludingTrailingWhitespace + retry.Padding.Left + retry.Padding.Right <= retry.ActualWidth,
+            "The retry button clips its label");
+        Click(retry);
+        Check(choice.IsCompletedSuccessfully && choice.Result && retry.Visibility == Visibility.Collapsed && Equals(dismiss.Content, "취소"),
+            "Retry did not return the preparation window to its running state");
     }
 }

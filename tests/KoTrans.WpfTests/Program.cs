@@ -18,16 +18,19 @@ internal static class Program
     public static int Main(string[] args)
     {
         // Headless child verifies real cross-process ownership/IPC; no Application or HWND.
-        if (args.Length == 2 && args[0] == "--activation-client") {
+        if (args.Length >= 2 && args[0] == "--activation-client") {
+            KoTrans.App.App.InitializeCapturePolicy(KoTrans.Core.AppLaunchOptions.Parse(args.Skip(2).ToArray(), args[1]));
             using var unexpectedOwner = InstanceActivation.TryOwn(args[1], () => { });
             if (unexpectedOwner is not null) return 2;
             return InstanceActivation.RequestAsync(args[1]).GetAwaiter().GetResult() ? 0 : 1;
         }
         if (args.SequenceEqual(new[] { "--list" }))
-        { Console.WriteLine("Background: Wpf (Study, Overlay, Profiles, Settings, stale pipeline UI)\nDesktop: WindowLifecycle (Show/Hide/restore/remote scroll), OverlayDrag (explicit physical mouse test), DictionaryHoverCapture (tooltip A/B real GDI, synthetic frame), StudyResize (secondary-monitor native hit/cursor diagnostic), WindowResize (main frame regression and isolated browser observation), MagpieNotifications (hidden native broadcast reception/lifetime; no shown windows/input); resize diagnostics move the mouse"); return 0; }
-        desktop = args.Length == 2 && args[0] == "--desktop" && args[1] is "WindowLifecycle" or "OverlayDrag" or "DictionaryHoverCapture" or "StudyResize" or "WindowResize" or "MagpieNotifications";
+        { Console.WriteLine("Background: Wpf (Study, Overlay, Profiles, Settings, stale pipeline UI)\nDesktop: WindowLifecycle (Show/Hide/restore/remote scroll), OverlayDrag (explicit physical mouse test), DictionaryHoverCapture (tooltip A/B real GDI, synthetic frame), StudyResize (secondary-monitor native hit/cursor diagnostic), WindowResize (main frame regression and isolated browser observation), MagpieNotifications (hidden native broadcast reception/lifetime; no shown windows/input), RecordingMode Normal/Debug/Recording/RecordingDebug (native capture affinity and OCR overlap); resize diagnostics move the mouse"); return 0; }
+        bool recordingTest = args.Length == 3 && args[0] == "--desktop" && args[1] == "RecordingMode"
+            && args[2] is "Normal" or "Debug" or "Recording" or "RecordingDebug";
+        desktop = recordingTest || args.Length == 2 && args[0] == "--desktop" && args[1] is "WindowLifecycle" or "OverlayDrag" or "DictionaryHoverCapture" or "StudyResize" or "WindowResize" or "MagpieNotifications";
         if (!desktop && args.Length != 0 && !args.SequenceEqual(new[] { "Wpf" }))
-        { Console.Error.WriteLine("Unknown suite. Use Wpf or explicitly --desktop WindowLifecycle/OverlayDrag/DictionaryHoverCapture/StudyResize/WindowResize/MagpieNotifications."); return 2; }
+        { Console.Error.WriteLine("Unknown suite. Use Wpf, --desktop RecordingMode Normal/Debug/Recording/RecordingDebug, or explicitly --desktop WindowLifecycle/OverlayDrag/DictionaryHoverCapture/StudyResize/WindowResize/MagpieNotifications."); return 2; }
         Application? application = null;
         var clock = Stopwatch.StartNew();
         var result = 0;
@@ -41,7 +44,8 @@ internal static class Program
             EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((sender, _) =>
             { if (!desktop && sender is Window { IsVisible: true }) throw new InvalidOperationException("Background test displayed a Window. Move it to Desktop."); }));
             if (desktop) {
-                if (args[1] == "OverlayDrag") Case("OverlayDrag", DesktopDrag.Run);
+                if (recordingTest) Case("RecordingMode/" + args[2], () => RecordingModeTests.Desktop(args[2]));
+                else if (args[1] == "OverlayDrag") Case("OverlayDrag", DesktopDrag.Run);
                 else if (args[1] == "StudyResize") Case("StudyResize", StudyResizeDesktopTests.Run);
                 else if (args[1] == "WindowResize") Case("WindowResize", WindowResizeDesktopTests.Run);
                 else if (args[1] == "DictionaryHoverCapture") Case("DictionaryHoverCapture", DictionaryHoverDesktopTests.Run);
@@ -69,11 +73,13 @@ internal static class Program
                 Case("Local dictionary profile, ADV/NVL delivery, cache isolation and both models", LocalDictionaryPipelineTests.Run);
                 Case("Starting overlay precedes preparation and handles ready/failure/cancellation", TranslationStartupUiTests.Run);
                 Case("Image file worker and bounds", WpfTests.ImageImport);
+                Case("Recording launch policy and immutable process flags", RecordingModeTests.Policy);
                 Case("Single instance activation, tray restore and IPC lifetime", InstanceAndSettingsPolishTests.Activation);
                 Case("Profile labels, Japanese visibility, global panels and model input captions", InstanceAndSettingsPolishTests.Controls);
                 Case("Game launch visibility, no translation and muted default profile color", GameLaunchTests.Controls);
                 Case("Game executable contract and existing-window matching", GameLaunchTests.Contract);
                 Case("Study rendering and state", WpfTests.Study);
+                Case("Study English-only side pronunciation and Japanese furigana", WpfTests.StudyPronunciationByLanguage);
                 Case("Ruby final-glyph to translation spacing", SubtitleUxTests.RubyGap);
                 Case("Subtitle named colors and live profile preview", SubtitleUxTests.PreviewAndColors);
                 Case("Original-only mode keeps automatic OCR and source subtitles", SubtitleUxTests.OriginalOnlyRecognition);
@@ -83,6 +89,7 @@ internal static class Program
                 Case("Overlay furigana cancellation and local-reading fallback", OverlayFuriganaTests.CancellationAndFallback);
                 Case("Study Mock service", WpfTests.StudyMock);
                 Case("Study settings/provider invalidation reason and recovery", StudyNoticeTests.SettingsInvalidation);
+                Case("Study source card visibility across empty notices, errors and recovery", StudyNoticeTests.EmptySourceCard);
                 Case("Study close-save, resident reuse and profile persistence", StudyPlacementTests.CloseAndProfiles);
                 Case("Study monitors, mixed DPI and minimized/fallback preservation", StudyPlacementTests.MonitorChanges);
                 Case("Study native frame gaps and client/caption protection", StudyResizeTests.Borders);

@@ -50,8 +50,8 @@ internal static class LaunchFeedbackTests
         try {
             Click(Named<Button>(main, "WatchButton"));
             Until(() => main.FeedbackToast.Visibility == Visibility.Visible, "Missing game start failure was only shown in status bar");
-            Check(main.FeedbackToast.Kind == FeedbackKind.Error && main.FeedbackToast.Message.Contains("게임 창을 찾지")
-                && main.FeedbackToast.Detail.Contains("게임 실행"), "Missing game start failure lacks a clear reason/action");
+            Check(main.FeedbackToast.Kind == FeedbackKind.Error && main.FeedbackToast.Message.Contains("게임 창을 확인")
+                && main.FeedbackToast.Detail.Contains("게임을 실행") && main.FeedbackToast.Detail.Contains("다시 선택"), "Missing game start failure lacks a clear reason/action");
             Check(!main.IsInTray && Equals(Named<Button>(main, "WatchButton").Content, "번역 시작"), "Failed start hid the main window or left Stop enabled");
             string reason = ((MainViewModel)main.DataContext).Status;
             Complete(main.SaveCurrentProfileAsync());
@@ -61,7 +61,11 @@ internal static class LaunchFeedbackTests
             var missing = main.StartTranslationAsync(true); Complete(missing);
             Check(!missing.Result && main.FeedbackToast.Message.Contains("대상 게임 창을 선택") && main.FeedbackToast.Detail.Contains("캡처 · OCR"),
                 "Unselected window does not explain how to choose a target");
-            profile.GameWindow = target.Identity; candidates.Add(target); main.ApplyLoadedSettings(settings);
+            profile.GameWindow = target.Identity; candidates.Add(target); candidates.Add(target with { Handle = new IntPtr(2) }); main.ApplyLoadedSettings(settings);
+            var ambiguous = main.StartTranslationAsync(true); Complete(ambiguous);
+            Check(!ambiguous.Result && main.FeedbackToast.Detail.Contains("여러 개") && !main.FeedbackToast.Detail.Contains("게임을 실행"),
+                "Ambiguous game window was misreported as a missing game");
+            candidates.RemoveAt(1); main.ApplyLoadedSettings(settings);
             var minimized = main.StartTranslationAsync(true); Complete(minimized);
             Check(!minimized.Result && main.FeedbackToast.Detail.Contains("최소화") && main.FeedbackToast.Detail.Contains("복원"),
                 "Minimized target did not explain restore action before creating an overlay/API service");

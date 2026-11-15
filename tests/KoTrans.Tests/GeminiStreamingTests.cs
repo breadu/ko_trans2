@@ -51,6 +51,8 @@ internal static class GeminiStreamingTests
             await new GeminiTranslationService(client,"synthetic-key").TranslateAsync(request,default);using var sent=JsonDocument.Parse(handler.Body);
             var config=sent.RootElement.GetProperty("generationConfig");
             Check(handler.Uri.EndsWith(":generateContent") && config.GetProperty("responseMimeType").GetString()=="application/json" && !config.TryGetProperty("thinkingConfig",out _),"Study JSON/reasoning behavior modified");
+            Check(JsonElement.DeepEquals(config.GetProperty("responseJsonSchema"), request.OutputSchema!.Value)
+                && !config.TryGetProperty("responseSchema", out _) && handler.Calls == 1, "Structured Gemini request lost its exact JSON schema or repeated the request");
         }
         foreach(var model in new[]{"models/gemini-3.5-flash-lite","unknown-model","gemini-3.8-flash","gemini-2.5-pro"}) {
             using var handler=new Handler(()=>Bytes(Chunk("valid","STOP")));using var client=new HttpClient(handler);

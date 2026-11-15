@@ -12,6 +12,40 @@ internal static class RubySuppressionTests
         var body = new OcrLine("あいうえおかきく漢字けこ、", .99f, new(503, 1055, 508, 41));
         var next = new OcrLine("これは別の本文です。", .99f, new(586, 1120, 837, 44));
         var options = new OcrOptions("ja", "NVL", false);
+        // A large false text box below dialogue is not a kanji/ruby parent.
+        // Geometry is synthetic; the proportions reproduce the failure in a scaled capture.
+        var dialogue = new OcrLine("明日は公園で友達と本を読みましょう。", .98f, new(47,57,586,47));
+        var decoration = new OcrLine("abcdef", .58f, new(25,90,460,99));
+        Check(LayoutProcessor.IsRuby(dialogue.Bounds, decoration.Bounds, false), "Fixture must expose the geometric false positive");
+        var preserved = LayoutProcessor.Arrange([dialogue, decoration], options, 839, 189);
+        Check(preserved.Any(l => l.Text.Contains(dialogue.Text)), "Full Japanese dialogue was deleted as ruby of a Latin decoration");
+        var kanaSentence = dialogue with { Text = "かしこまりました。" };
+        Check(LayoutProcessor.Arrange([kanaSentence, decoration], options, 839, 189).Any(l => l.Text.Contains(kanaSentence.Text)),
+            "Kana sentence was deleted before a credible kanji parent was established");
+        var label = new OcrLine("案内", .99f, new(66,8,62,37));
+        var smallNoise = new OcrLine("ABCDE", .97f, new(512,166,24,10));
+        var adv = LayoutProcessor.Arrange([dialogue, decoration, label, smallNoise], options with { ReadingMode = "ADV" }, 839, 189);
+        Check(adv.Select(l => l.Text).SequenceEqual(new[] {label.Text, dialogue.Text}),
+            "Short speaker label or tiny remote text bridged decoration back into ADV dialogue");
+        var shorterDialogue = dialogue with {Text="「図書館へ行きます」", Bounds=new(62,62,296,41)};
+        var largeNoise = decoration with {Text="ab", Confidence=.75f, Bounds=new(71,93,282,96)};
+        var secondNoise = decoration with {Text="C", Confidence=.69f, Bounds=new(316,104,86,75)};
+        var shortAdv = LayoutProcessor.Arrange([shorterDialogue, largeNoise, secondNoise,
+            label with {Bounds=new(66,7,83,38)}, smallNoise], options with { ReadingMode = "ADV" }, 839, 189);
+        Check(shortAdv.Select(l => l.Text).SequenceEqual(new[] {label.Text, shorterDialogue.Text}),
+            "Large detached noise won paragraph scoring over a shorter recognized dialogue");
+        var ordinaryReading = new OcrLine("かんじ", .99f, new(20,5,35,8));
+        var ordinaryBody = new OcrLine("漢字", .99f, new(20,17,100,30));
+        Check(LayoutProcessor.Arrange([ordinaryReading, ordinaryBody], options, 400, 300).Count == 1,
+            "Recognized normal kana reading was not suppressed");
+        Check(LayoutProcessor.Arrange([ordinaryReading, ordinaryBody with {Text="ABCD"}], options, 400, 300)
+            .Any(l=>l.Text.Contains(ordinaryReading.Text)), "Confident Latin decoration was accepted as a kanji parent");
+        Check(LayoutProcessor.Arrange([ordinaryReading with {Confidence=.5f}, ordinaryBody], options, 400, 300)
+            .Any(l=>l.Text.Contains(ordinaryReading.Text)), "Uncertain small line was deleted");
+        var verticalReading = ordinaryReading with { Bounds=new(54,20,8,35), Vertical=true };
+        var verticalBody = ordinaryBody with { Bounds=new(20,20,30,100), Vertical=true };
+        Check(LayoutProcessor.Arrange([verticalReading, verticalBody], options with {Vertical=true}, 400, 300).Count == 1,
+            "Recognized vertical kana/kanji pair was not suppressed");
         IReadOnlyList<OcrLine> Arrange(OcrLine ruby, OcrLine parent, OcrOptions? selected = null) =>
             LayoutProcessor.Arrange([ruby, parent, next], selected ?? options, 2242, 1299);
         bool Retains(OcrLine ruby, OcrLine parent, OcrOptions? selected = null) => Arrange(ruby, parent, selected).Any(l => l.Text.Contains(ruby.Text));

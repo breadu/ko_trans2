@@ -24,7 +24,7 @@ internal static class Phase4Tests
         }
         await Timed("Json", () => { Parsing(); return Task.CompletedTask; });
         await Timed("Ollama source vocabulary", () => { SourceVocabulary(); return Task.CompletedTask; });
-        await Timed("MockHttp-timeout", Http); await Timed("Sessions", Sessions);
+        await Timed("MockHttp-timeout", Http); await Timed("Gemini structured study", GeminiStudy); await Timed("Sessions", Sessions);
         await Timed("VoiceIndex", () => { Voice(); return Task.CompletedTask; });
         await Timed("Japanese-dictionary", () => { Japanese(); return Task.CompletedTask; });
         await Timed("Lifetime", Lifetime); await Timed("Settings", Settings);
@@ -45,6 +45,16 @@ internal static class Phase4Tests
         Check(ExplanationPrompt.ValidateInput("hello\r\n世界") == "hello\n世界", "Input normalization");
         Check(ExplanationPrompt.DetectLanguage("明日", "en") == "ja", "Direct Japanese input language");
         Check(ExplanationPrompt.DetectLanguage("journey", "ja") == "en", "Direct English input language");
+        foreach (var (payload, cause) in new[] {
+            ("{}", "어휘 목록이 누락"),
+            ("{\"vocabulary\":{}}", "어휘 목록이 배열"),
+            ("{\"full_translation\":[],\"vocabulary\":[]}", "전체 번역 항목이 문자열"),
+            (Json.Replace("journey", new string('x', 201)), "단어 항목이 200자를 초과"),
+            ("{\"vocabulary\":[{\"word\":\"private-data\",\"meaning_ko\":\"뜻\",\"examples\":{}}]}", "예문 목록이 배열"),
+            ("{\"private-data\":", "JSON 문법") }) {
+            try { StudyJson.Parse(payload); throw new Exception("Invalid study accepted"); }
+            catch (TranslationException ex) { Check(ex.Message.Contains(cause) && !ex.Message.Contains("private-data"), "Study failure lacks a safe specific cause"); }
+        }
     }
     private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handle) : HttpMessageHandler
     {
@@ -80,6 +90,36 @@ internal static class Phase4Tests
         Check(!ExplanationPrompt.Schema.GetProperty("properties").GetProperty("vocabulary").GetProperty("items").GetProperty("properties").GetProperty("word").TryGetProperty("pattern", out _),
             "Experimental grammar constraints must not change the shared schema");
     }
+    private static async Task GeminiStudy()
+    {
+        const string japanese = """{"full_translation":"내일 학교에 갑니다.","sentence_explanation":"に는 이동 목적지를 나타냅니다.","vocabulary":[{"word":"学校","pronunciation":"がっこう","meaning_src":"学ぶ場所。","meaning_ko":"학교","examples":[{"en_or_jp":"学校に行く。","ko":"학교에 가다."}],"tip":"교육 기관을 나타냅니다."}]}""";
+        const string singleWord = """{"full_translation":null,"sentence_explanation":null,"vocabulary":[{"word":"学校","pronunciation":"がっこう","meaning_src":"学ぶ場所。","meaning_ko":"학교","examples":[],"tip":""}]}""";
+        foreach (string payload in new[] { japanese, singleWord }) {
+            using var handler = new Handler((_, _) => Task.FromResult(Response(TranslationProvider.Gemini, payload)));
+            using var client = new HttpClient(handler);
+            var request = new ExplanationRequest(payload == japanese ? "明日学校に行きます。" : "学校", "ja",
+                new() { Provider = TranslationProvider.Gemini, Model = "gemini-3.5-flash-lite" });
+            var result = await new ExplanationService(Transport(TranslationProvider.Gemini, client)).ExplainAsync(request, default);
+            using var sent = JsonDocument.Parse(handler.Bodies.Single());
+            Check(result.Study.Vocabulary[0].Word == "学校" && result.HttpAttempts == 1
+                && handler.Uris.Single().EndsWith("/gemini-3.5-flash-lite:generateContent"), "Japanese Gemini explanation changed model or repeated its request");
+            var schema = sent.RootElement.GetProperty("generationConfig").GetProperty("responseJsonSchema");
+            Check(JsonElement.DeepEquals(schema, ExplanationPrompt.Schema), "Japanese/nullable explanation schema was not sent to Gemini");
+            Check(sent.RootElement.GetProperty("contents")[0].GetProperty("parts")[0].GetProperty("text").GetString() == request.Text,
+                "Gemini study altered the original input");
+        }
+        using (var handler = new Handler((_, _) => Task.FromResult(Response(TranslationProvider.Gemini, "{\"vocabulary\":{}}"))))
+        using (var client = new HttpClient(handler)) {
+            await using var session = new ExplanationSession();
+            try {
+                await session.AnalyzeAsync(Guid.NewGuid(), Request(), new ExplanationService(Transport(TranslationProvider.Gemini, client)));
+                throw new Exception("Malformed Gemini study was displayed");
+            } catch (TranslationException ex) {
+                Check(ex.Message.Contains("어휘 목록이 배열") && handler.Bodies.Count == 1 && session.CacheHits == 0,
+                    "Malformed Gemini study lost its cause, was automatically retried or entered the cache");
+            }
+        }
+    }
     private static HttpResponseMessage Response(TranslationProvider provider, string json = Json) => new(HttpStatusCode.OK) { Content = new StringContent(provider switch
     {
         TranslationProvider.OpenAI => JsonSerializer.Serialize(new { status = "completed", output = new[] { new { type = "message", content = new[] { new { type = "output_text", text = json } } } } }),
@@ -102,6 +142,12 @@ internal static class Phase4Tests
                 TranslationProvider.Gemini => root.GetProperty("generationConfig").GetProperty("responseMimeType").GetString() == "application/json" && root.GetProperty("contents").GetArrayLength() == 1,
                 _ => root.GetProperty("format").GetProperty("properties").TryGetProperty("vocabulary", out _) && root.GetProperty("messages").GetArrayLength() == 2
             }, "JSON mode / no translation history");
+            if (provider == TranslationProvider.Gemini) {
+                var config = root.GetProperty("generationConfig");
+                Check(JsonElement.DeepEquals(config.GetProperty("responseJsonSchema"), ExplanationPrompt.Schema)
+                    && !config.TryGetProperty("responseSchema", out _) && !config.TryGetProperty("thinkingConfig", out _),
+                    "Gemini study dropped its schema or used an incompatible schema/reasoning setting");
+            }
             Check(!handler.Bodies[0].Contains("synthetic-key") && !handler.Uris[0].Contains("synthetic-key"), "Key in body/URL");
             var prompt = provider switch {
                 TranslationProvider.OpenAI => root.GetProperty("instructions").GetString(),

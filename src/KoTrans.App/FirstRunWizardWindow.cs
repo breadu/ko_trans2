@@ -54,7 +54,9 @@ internal sealed class FirstRunWizardWindow : Window
         var root=new DockPanel {Margin=new(20)};Content=root;
         var header=new StackPanel {Margin=new Thickness(0,0,0,14)};header.Children.Add(progress);DockPanel.SetDock(header,Dock.Top);root.Children.Add(header);
         var footer=new WrapPanel {HorizontalAlignment=HorizontalAlignment.Right,Margin=new(0,12,0,0)};
-        foreach(var button in new[]{cancel,Previous,retry,Next}) {button.MinWidth=75;button.FontSize=14;footer.Children.Add(button);}
+        foreach(var button in new[]{cancel,Previous,retry,Next}) {
+            button.MinWidth=75;button.Height=40;button.FontSize=14;footer.Children.Add(button);
+        }
         DockPanel.SetDock(footer,Dock.Bottom);root.Children.Add(footer);
         var body=new StackPanel();body.Children.Add(heading);body.Children.Add(description);
         foreach(var page in pages)body.Children.Add(page);body.Children.Add(status);body.Children.Add(exclusion);
@@ -200,7 +202,7 @@ internal sealed class FirstRunWizardWindow : Window
     }
     internal void SetCaptureExclusion(bool excluded)
     {
-        CaptureExcluded=excluded;exclusion.Text=excluded || CaptureExclusionPolicy.DebugCaptureEnabled
+        CaptureExcluded=excluded;exclusion.Text=excluded || CaptureExclusionPolicy.UiCaptureEnabled
             ? "" : "이 안내 창이 캡처 영역을 가리면 최소화하거나 영역 밖으로 옮겨 주세요.";
     }
     private static void Label(StackPanel panel,string value)=>panel.Children.Add(new TextBlock {Text=value,Foreground=Brushes.LightSteelBlue,Margin=new(0,12,0,4),TextWrapping=TextWrapping.Wrap});

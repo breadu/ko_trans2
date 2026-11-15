@@ -20,7 +20,7 @@ internal static class TranslationStartupUiTests
     }
     internal static void Run()
     {
-        LocalPreparation(); OriginalOnly();
+        LocalPreparation(); DictionaryFailure(); OriginalOnly();
     }
     private static void LocalPreparation()
     {
@@ -67,7 +67,20 @@ internal static class TranslationStartupUiTests
             Check(!main.IsInTray, "Declined preparation did not restore the main window");
             main.PrepareLocalOverride = _ => Task.FromException<bool>(new TranslationException("합성 준비 실패"));
             start = main.StartMainTranslationAsync(true); Complete(start);
-            Check(!start.Result && !guide.Text.Contains("준비") && Named<TextBlock>(window, "OverlayNotice").Text.Contains("로컬 AI 모델을 준비하지 못"), "Failed preparation hid actionable guidance or retained preparing state");
+            Check(!start.Result && !guide.Text.Contains("준비") && Named<TextBlock>(window, "OverlayNotice").Text == "합성 준비 실패", "Failed preparation hid its actual cause or retained preparing state");
+            foreach (var failure in new Exception[] {
+                new OcrInitializationException("선택한 OCR 모델은 세로쓰기를 지원하지 않습니다."),
+                new CaptureUnavailableException("대상 창이 종료되었습니다. 창을 다시 선택하세요."),
+                new TranslationException("로컬 AI 모델이 변경되었습니다. 번역을 다시 시작해 주세요."),
+                new InvalidDataException("합성 설정 값이 올바르지 않습니다."),
+                new IOException("private model file path") }) {
+                main.PrepareLocalOverride = _ => Task.FromException<bool>(failure);
+                start = main.StartMainTranslationAsync(true); Complete(start);
+                string notice = Named<TextBlock>(window, "OverlayNotice").Text;
+                Check(!start.Result && notice == ((MainViewModel)main.DataContext).Status, "Startup overlay disagreed with the actual failure");
+                Check(failure is IOException ? !notice.Contains("private") && !notice.Contains("모델") : notice == failure.Message,
+                    "Startup guessed the cause or dropped actionable guidance");
+            }
             bool cancelPending = false;
             gate = new(TaskCreationOptions.RunContinuationsAsynchronously); main.PrepareLocalOverride = token => { cancelPending = true; return gate.Task.WaitAsync(token); };
             start = main.StartMainTranslationAsync(true); Until(() => cancelPending, "Cancellation fixture not preparing");
@@ -78,6 +91,38 @@ internal static class TranslationStartupUiTests
             Close(window); Close(window.Chrome); if (Directory.Exists(root)) Directory.Delete(root, true);
             Check(cleanupFailures == 0, "Canceled/handled startup work became a cleanup failure");
         }
+    }
+    private static void DictionaryFailure()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "KoTrans.StartupDictionary", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var descriptor = new OcrEngineDescriptor("dictionary-startup-fixture", "Mock OCR", "v1", ["en"], false, false, OcrCapabilities.Basic, false, true, "Synthetic");
+        var registration = new OcrEngineRegistration(descriptor, _ => new Ocr(), (_, _) => new(true, "Mock ready"));
+        var settings = new AppSettings(); settings.Validate(); var profile = settings.DefaultProfile;
+        profile.CaptureMode = CaptureMode.Clipboard; profile.Translation.Provider = TranslationProvider.HyMtLocal;
+        profile.OcrEngineId = descriptor.Id; profile.OcrModelPresetId = "default";
+        profile.CharacterDictionaryEnabled = true; profile.CharacterDictionaryPath = Path.Combine(root, "characters.json");
+        var main = Track(new MainWindow(new SettingsStore(root), new ApiKeyStore(root), () => [], ocrFactory: new(new([registration]), root)));
+        main.ApplyLoadedSettings(settings); main.PresentStartingOverlayOverride = _ => { };
+        var window = Track(main.CreateOverlayWindow()); Track(window.Chrome);
+        int preparations = 0;
+        main.PrepareLocalOverride = _ => { preparations++; return Task.FromResult(true); };
+        try {
+            foreach (string failure in new[] { "missing", "missing-retry", "malformed" }) {
+                if (failure == "malformed") File.WriteAllText(profile.CharacterDictionaryPath, "{");
+                var start = main.StartTranslationAsync(false); Complete(start);
+                string notice = Named<TextBlock>(window, "OverlayNotice").Text;
+                Check(!start.Result && preparations == 0, "Invalid dictionary loaded a local model or started translation");
+                Check(notice.Contains("사전") && !notice.Contains("로컬 AI") && !notice.Contains("메모리")
+                    && notice == ((MainViewModel)main.DataContext).Status, "Dictionary failure was relabeled as a model preparation failure");
+            }
+            File.WriteAllText(profile.CharacterDictionaryPath, "[{\"name\":\"Alice\",\"korean_name\":\"앨리스\"}]");
+            var repaired = main.StartTranslationAsync(false); Complete(repaired);
+            Check(repaired.Result && preparations == 1, "Corrected dictionary could not restart translation");
+            profile.CharacterDictionaryPath = Path.Combine(root, "absent.json"); profile.CharacterDictionaryEnabled = false;
+            var disabled = main.StartTranslationAsync(false); Complete(disabled);
+            Check(disabled.Result && preparations == 2, "Disabled dictionary still blocked startup");
+        } finally { Close(main); Close(window); Close(window.Chrome); Directory.Delete(root, true); }
     }
     private static void OriginalOnly()
     {

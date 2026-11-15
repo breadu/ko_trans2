@@ -189,7 +189,7 @@ internal sealed class DeveloperSupportWindow : Window
         var close = new Button
         {
             Name = "CloseDeveloperSupport", Content = "닫기", IsCancel = true,
-            Style = (Style)FindResource("DarkDisabledButton"), Width = 88, Height = 40,
+            Style = (Style)FindResource("DarkDisabledButton"), Height = 40,
             Background = Brush(43, 66, 89), BorderBrush = Brush(92, 126, 158),
             BorderThickness = new Thickness(1), Foreground = Foreground,
             Margin = new Thickness(0, 0, 10, 0)
