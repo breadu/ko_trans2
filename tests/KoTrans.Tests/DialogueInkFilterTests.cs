@@ -34,6 +34,19 @@ internal static class DialogueInkFilterTests
         var secondRow = new OcrLine("次の行", .96f, new(80,78,150,30));
         Check(DialogueInkFilter.Exclude(image, [body,noise,secondRow], options).Contains(noise),
             "A weak number attached to a genuine second row was lost");
+        var duplicate = new OcrLine("1", .9f, new(50,99,16,10));
+        var weakDigit = noise with {Text="1",Confidence=.78f};
+        var filtered = DialogueInkFilter.Exclude(image,[body,weakDigit,duplicate],options);
+        Check(!filtered.Contains(weakDigit) && filtered.Contains(duplicate),
+            "A confident nested fragment protected the larger dim scenery patch");
+        Check(LayoutProcessor.Arrange(filtered,options,400,180).Single().Text==body.Text,
+            "Nested detector fragments were appended as a false numeric dialogue row");
+        var separateSmall = duplicate with {Bounds=new(80,99,16,10)};
+        Check(DialogueInkFilter.Exclude(image,[body,weakDigit,separateSmall],options).Contains(weakDigit),
+            "An independent small neighbouring glyph lost its row protection");
+        var sameHeight = duplicate with {Bounds=noise.Bounds};
+        Check(DialogueInkFilter.Exclude(image,[body,weakDigit,sameHeight],options).Contains(weakDigit),
+            "A normal-height confident row was treated as a tiny nested fragment");
         using var noInk = new Mat(180,400,MatType.CV_8UC3,new Scalar(100,110,120));
         Check(DialogueInkFilter.Exclude(noInk,input,options).Contains(noise), "OCR text alone established bright dialogue");
         Cv2.Rectangle(noInk,new(20,16,330,22),Scalar.White,-1);
@@ -41,6 +54,8 @@ internal static class DialogueInkFilterTests
         using var whiteNumber = image.Clone();
         Cv2.PutText(whiteNumber,"7",new(42,102),HersheyFonts.HersheySimplex,.8,Scalar.White,2);
         Check(DialogueInkFilter.Exclude(whiteNumber,input,options).Contains(noise), "A real white numeric row was erased");
+        Check(DialogueInkFilter.Exclude(whiteNumber,[body,weakDigit,duplicate],options).Contains(weakDigit),
+            "A genuine numeric row with overlapping detections lost its visible glyphs");
         using var colouredNumber = image.Clone();
         Cv2.PutText(colouredNumber,"7",new(42,102),HersheyFonts.HersheySimplex,.8,new Scalar(20,20,240),2);
         Check(DialogueInkFilter.Exclude(colouredNumber,input,options).Contains(noise), "A real coloured numeric row was erased");

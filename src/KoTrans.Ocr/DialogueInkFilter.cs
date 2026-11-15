@@ -19,7 +19,8 @@ internal static class DialogueInkFilter
             && HasBrightRow(image, l.Bounds)).ToArray();
         if (bodies.Length == 0) return lines;
         return lines.Where(l => !suspects.Contains(l) || !bodies.Any(b => DetachedBelow(l.Bounds, b.Bounds))
-            || lines.Any(b => b != l && b.Confidence >= .8 && SameRow(l.Bounds, b.Bounds))
+            || lines.Any(b => b != l && b.Confidence >= .8 && SameRow(l.Bounds, b.Bounds)
+                && !NestedFragment(l.Bounds, b.Bounds))
             || !DimLowContrast(image, l.Bounds)).ToList();
     }
 
@@ -27,6 +28,13 @@ internal static class DialogueInkFilter
         && b.X + (long)b.Width <= image.Width && b.Y + (long)b.Height <= image.Height;
     private static bool SameRow(PixelRect a, PixelRect b) =>
         Math.Min(a.Y + a.Height, b.Y + b.Height) - Math.Max(a.Y, b.Y) > Math.Min(a.Height, b.Height) * .5;
+    // A second recognition of a small piece of the same patch is not independent
+    // evidence for a dialogue row. Keep that confident fragment itself; after the
+    // weak scenery bridge is removed, normal layout can select the actual body.
+    private static bool NestedFragment(PixelRect outer, PixelRect inner) => inner.Height < outer.Height * .55
+        && Math.Max(0, Math.Min(outer.X + outer.Width, inner.X + inner.Width) - Math.Max(outer.X, inner.X))
+        * (double)Math.Max(0, Math.Min(outer.Y + outer.Height, inner.Y + inner.Height) - Math.Max(outer.Y, inner.Y))
+        >= inner.Width * (double)inner.Height * .8;
     private static bool DetachedBelow(PixelRect mark, PixelRect body) =>
         mark.Y >= body.Y + body.Height * 1.25 && mark.Y <= body.Y + body.Height * 3
         && mark.X >= body.X && mark.X + mark.Width <= body.X + body.Width
