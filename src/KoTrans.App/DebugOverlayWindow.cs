@@ -86,9 +86,9 @@ internal sealed class DebugOverlayWindow : Window
     internal void SetCaptureExclusion(bool success)
     {
         CaptureExcluded = success;
-        telemetry.SetContext(v => v with { Exclusion = CaptureExclusionPolicy.DebugCaptureEnabled ? DebugReason.NotMeasured
+        telemetry.SetContext(v => v with { Exclusion = CaptureExclusionPolicy.UiCaptureEnabled ? DebugReason.NotMeasured
             : success ? DebugReason.Excluded : DebugReason.ExclusionFailed });
-        exclusionWarning.Text = success || CaptureExclusionPolicy.DebugCaptureEnabled ? ""
+        exclusionWarning.Text = success || CaptureExclusionPolicy.UiCaptureEnabled ? ""
             : "캡처 제외 실패 · 디버그 창을 캡처 영역 밖으로 이동하세요.";
     }
     internal void SetPaused(bool value) { paused = value; pause.Content = value ? "재개" : "일시정지"; activity.Text = value ? "PAUSED" : "RUNNING"; if (!value) SafeRefresh(); }

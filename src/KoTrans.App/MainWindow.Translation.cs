@@ -283,13 +283,15 @@ public partial class MainWindow
                 + $" · AI {update.ApiMs:F0} / 전체 {update.TotalMs:F0} ms";
         });
     }
-    private void EnsureCaptureSafe(PixelRect bounds,CaptureCover? presentationCover=null)
+    internal void EnsureCaptureSafe(PixelRect bounds,CaptureCover? presentationCover=null)
     {
         // Only a presenter bound to the validated foreground game supplies this override.
         // Its visible image, rather than the smaller hidden original client, covers app windows below it.
         var cover = presentationCover ?? WindowTargets.ForegroundCaptureCover();
+        var managedHandles = App.RecordingMode ? new HashSet<IntPtr>() : null;
         foreach (Window window in System.Windows.Application.Current.Windows)
         {
+            managedHandles?.Add(new WindowInteropHelper(window).Handle);
             if (!NeedsCaptureOverlapCheck(window.IsVisible, window.WindowState == WindowState.Minimized, window == qaFixture,
                 window == overlay && overlay.CaptureExcluded || window == study && study.CaptureExcluded || window is OverlayChromeWindow { CaptureExcluded: true }
                 || window is FirstRunWizardWindow {CaptureExcluded:true} || DebugOverlayWindow.ExcludedForCapture(window))) continue;
@@ -298,10 +300,20 @@ public partial class MainWindow
             bool above = cover is not null && state.Bounds is { } area && WindowTargets.Overlaps(area, bounds)
                 && WindowTargets.IsAbove(cover.Handle, handle);
             if (WindowTargets.BlocksCapture(state, bounds, cover?.Bounds, above))
-                throw new CaptureUnavailableException(CaptureOverlapMessage(window == this ? "설정창" : window == overlay ? "번역창" : window == study ? "학습창" : window is FirstRunWizardWindow ? "처음 사용하기 안내 창" : "추가 설정창"), CaptureWaitReason.Occluded);
+                throw new CaptureUnavailableException(CaptureOverlapMessage(window == this ? "설정창" : window == overlay ? "번역창" : window == study ? "학습창" : window is OverlayChromeWindow ? "자막 조작창" : window is FirstRunWizardWindow ? "처음 사용하기 안내 창" : "추가 설정창"), CaptureWaitReason.Occluded);
+        }
+        // Recording also exposes transient native popups outside the managed window list.
+        if (managedHandles is not null) foreach (var handle in WindowTargets.CurrentProcessWindows()) {
+            if (managedHandles.Contains(handle)) continue;
+            var state = WindowTargets.CaptureState(handle);
+            bool above = cover is not null && WindowTargets.IsAbove(cover.Handle, handle);
+            if (WindowTargets.BlocksCapture(state, bounds, cover?.Bounds, above))
+                throw new CaptureUnavailableException(CaptureOverlapMessage("팝업 창"), CaptureWaitReason.Occluded);
         }
     }
-    internal static string CaptureOverlapMessage(string windowName) => $"KO Trans 2 {windowName}이 캡처 영역을 가립니다. 해당 창을 숨기거나 최소화하거나, 게임 창을 앞으로 가져오세요.";
+    internal static string CaptureOverlapMessage(string windowName) => $"KO Trans 2 {windowName}이 캡처 영역을 가립니다. "
+        + (App.RecordingMode ? "녹화 모드에서는 자막도 캡처됩니다. 해당 창을 인식 영역 밖으로 옮기거나 숨긴 뒤 다시 확인하세요."
+            : "해당 창을 숨기거나 최소화하거나, 게임 창을 앞으로 가져오세요.");
     internal static bool NeedsCaptureOverlapCheck(bool visible, bool minimized, bool fixture, bool captureExcluded)
         => visible && !minimized && !fixture && !captureExcluded;
     private async Task ToggleTranslationAsync()

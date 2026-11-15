@@ -82,6 +82,17 @@ public static partial class WindowTargets
         return target is null ? pid != Environment.ProcessId : handle == target.Handle;
     }
     public static bool TryExcludeFromCapture(IntPtr handle) => OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041) && SetWindowDisplayAffinity(handle, 0x11);
+    // Includes WPF Popup/ToolTip HWNDs, which are not Application.Windows entries.
+    public static IReadOnlyList<IntPtr> CurrentProcessWindows()
+    {
+        var windows = new List<IntPtr>();
+        EnumWindows((handle, _) => {
+            GetWindowThreadProcessId(handle, out var process);
+            if (process == (uint)Environment.ProcessId) windows.Add(handle);
+            return true;
+        }, IntPtr.Zero);
+        return windows;
+    }
     public static PixelRect? Bounds(IntPtr handle) => GetWindowRect(handle, out var rect) ? new(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top) : null;
     public static bool Overlaps(PixelRect a, PixelRect b) => a.X < (long)b.X + b.Width && b.X < (long)a.X + a.Width && a.Y < (long)b.Y + b.Height && b.Y < (long)a.Y + a.Height;
     [StructLayout(LayoutKind.Sequential)] private struct NativeRect { public int Left, Top, Right, Bottom; }

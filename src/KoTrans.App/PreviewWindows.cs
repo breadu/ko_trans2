@@ -163,7 +163,7 @@ internal sealed partial class TranslationWindow : Window
             var handle = new WindowInteropHelper(this).Handle;
             HwndSource.FromHwnd(handle).AddHook(OverlayMessage);
             AttachMagpieOrder(handle, getGameWindow);
-            textExcluded = WindowTargets.TryExcludeFromCapture(handle); SetClickThrough(profile.OverlayClickThrough);
+            textExcluded = CaptureExclusionPolicy.TryExclude(handle, subtitleWindow: true); SetClickThrough(profile.OverlayClickThrough);
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged += DisplaysChanged;
         };
         IsVisibleChanged += (_, _) => {

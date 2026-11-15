@@ -8,8 +8,20 @@ public partial class App : System.Windows.Application
     public static string DataDirectory { get; private set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "KoTrans2");
     public static bool IsDev { get; private set; }
     public static bool MockAi { get; private set; }
-    // Set from the explicit --debug-overlay launch flag before any window is created.
+    // Set once from explicit startup flags, before any window is created.
     internal static bool DebugCaptureMode { get; private set; }
+    internal static bool RecordingMode { get; private set; }
+    private static bool capturePolicyInitialized;
+    internal static void InitializeCapturePolicy(KoTrans.Core.AppLaunchOptions launch)
+    {
+        if (capturePolicyInitialized) throw new InvalidOperationException("Capture policy is fixed at process startup.");
+        DebugCaptureMode = launch.DebugOverlay;
+        RecordingMode = launch.Recording;
+        capturePolicyInitialized = true;
+    }
+    internal static string? CaptureModeRestartNotice(bool debug, bool recording) => recording
+        ? "녹화 모드는 새 실행에서만 적용됩니다. 실행 중인 KO Trans 2의 캡처 정책은 변경하지 않았습니다. 알림 영역 아이콘 우클릭 → 종료로 완전히 종료한 뒤 --recording 옵션으로 다시 실행하세요."
+        : debug ? "디버그 창은 새 실행에서만 사용할 수 있습니다. 알림 영역 아이콘 우클릭 → 종료로 KO Trans 2를 완전히 종료한 뒤 디버그 옵션으로 다시 실행하세요." : null;
     public static double ProcessElapsedMs => (DateTime.Now - Process.GetCurrentProcess().StartTime).TotalMilliseconds;
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -22,7 +34,7 @@ public partial class App : System.Windows.Application
             var launch = KoTrans.Core.AppLaunchOptions.Parse(e.Args, DataDirectory);
             DataDirectory = launch.DataDirectory; MockAi = launch.MockAi;
             debugRequested = launch.DebugOverlay;
-            DebugCaptureMode = debugRequested;
+            InitializeCapturePolicy(launch);
         }
         catch (ArgumentException ex)
         { MessageBox.Show(ex.Message, "KO Trans 2 · 실행 인자 오류"); Shutdown(2); return; }
@@ -34,7 +46,7 @@ public partial class App : System.Windows.Application
             if (instance is null) {
                 bool activated = await InstanceActivation.RequestAsync(DataDirectory, pid => AllowSetForegroundWindow(pid));
                 if (!activated) MessageBox.Show("실행 중인 KO Trans 2 창을 열지 못했습니다. 알림 영역 아이콘의 ‘열기’를 선택하세요. 설정 폴더 접근 권한도 확인해 주세요.", "KO Trans 2");
-                else if (debugRequested) MessageBox.Show("디버그 창은 새 실행에서만 사용할 수 있습니다. 알림 영역 아이콘 우클릭 → 종료로 KO Trans 2를 완전히 종료한 뒤 디버그 옵션으로 다시 실행하세요.", "KO Trans 2 · DEBUG");
+                else if (CaptureModeRestartNotice(debugRequested, RecordingMode) is { } notice) MessageBox.Show(notice, "KO Trans 2 · 실행 옵션");
                 Shutdown(activated ? 0 : 2); return;
             }
         }

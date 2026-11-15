@@ -116,7 +116,7 @@ internal sealed class OverlayChromeWindow : Window
             HwndSource.FromHwnd(hwnd).AddHook((IntPtr h, int m, IntPtr w, IntPtr l, ref bool handled) => {
                 if (m == 0x21) { handled = true; return new IntPtr(3); } return IntPtr.Zero;
             });
-            CaptureExcluded = WindowTargets.TryExcludeFromCapture(hwnd); UpdateInputRegion();
+            CaptureExcluded = CaptureExclusionPolicy.TryExclude(hwnd, subtitleWindow: true); UpdateInputRegion();
         };
         Loaded += (_, _) => { if (inputFailed) { Hide(); return; } SyncBounds(); UpdateInputRegion(); };
         SizeChanged += (_, _) => UpdateInputRegion(); DpiChanged += (_, _) => { SyncBounds(); UpdateInputRegion(); };

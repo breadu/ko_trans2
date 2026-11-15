@@ -34,10 +34,12 @@ internal static class InstanceAndSettingsPolishTests
             var start = new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute=false, CreateNoWindow=true };
             if (Path.GetFileNameWithoutExtension(Environment.ProcessPath!).Equals("dotnet",StringComparison.OrdinalIgnoreCase)) start.ArgumentList.Add(typeof(InstanceAndSettingsPolishTests).Assembly.Location);
             start.ArgumentList.Add("--activation-client"); start.ArgumentList.Add(directory);
+            start.ArgumentList.Add("--recording"); start.ArgumentList.Add("--debug-overlay");
             using (var child = System.Diagnostics.Process.Start(start)!) {
                 Complete(child.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)));
                 Until(()=>!main.IsInTray,"Another process did not restore the owner window");
                 Check(child.ExitCode==0 && callbacks==4,"Another process acquired ownership or failed to activate");
+                Check(!KoTrans.App.App.RecordingMode && !KoTrans.App.App.DebugCaptureMode, "Activation client changed the running owner's capture policy");
             }
             // Invalid protocol input cannot activate the app and cannot poison the next connection.
             var invalid = Task.Run(async () => {

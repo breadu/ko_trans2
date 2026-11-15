@@ -2,17 +2,17 @@ using KoTrans.Infrastructure;
 
 namespace KoTrans.App;
 
-// UI screenshot capture is explicitly enabled only when --debug-overlay was
-// present at process launch. Subtitle text AND its chrome stay excluded in all
-// modes to avoid capturing translated subtitles back into OCR.
+// Startup-only policy. Debug preserves subtitle exclusion; recording exposes all
+// windows. A false exclusion result deliberately keeps OCR overlap protection active.
 internal static class CaptureExclusionPolicy
 {
-    internal static bool NeedsExclusion(bool debugOverlayRequested, bool subtitleWindow)
-        => !debugOverlayRequested || subtitleWindow;
+    internal static bool NeedsExclusion(bool debugOverlayRequested, bool subtitleWindow, bool recordingRequested = false)
+        => !recordingRequested && (!debugOverlayRequested || subtitleWindow);
 
-    internal static bool DebugCaptureEnabled => App.DebugCaptureMode;
+    internal static bool UiCaptureEnabled => App.DebugCaptureMode || App.RecordingMode;
 
     internal static bool TryExclude(IntPtr handle, bool subtitleWindow = false)
-        => NeedsExclusion(App.DebugCaptureMode, subtitleWindow)
+        // Each HWND is new: not setting affinity leaves WDA_NONE. No runtime toggle.
+        => NeedsExclusion(App.DebugCaptureMode, subtitleWindow, App.RecordingMode)
             && WindowTargets.TryExcludeFromCapture(handle);
 }
